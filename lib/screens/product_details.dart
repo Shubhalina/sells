@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// import 'offers_negotiations_page.dart'; // <-- Update this path as needed
+import 'package:sells/screens/OffersNegotiationsPage.dart';
 
 class ProductDetailsPage extends StatelessWidget {
   final String title;
@@ -32,13 +34,16 @@ class ProductDetailsPage extends StatelessWidget {
                     child: Image.network(
                       image,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image_not_supported, size: 80),
-                      ),
+                      errorBuilder:
+                          (context, error, stackTrace) => Container(
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 80,
+                            ),
+                          ),
                     ),
                   ),
-                  // Gradient overlay for better text visibility
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -106,7 +111,10 @@ class ProductDetailsPage extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(20),
@@ -122,7 +130,10 @@ class ProductDetailsPage extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade100,
                           borderRadius: BorderRadius.circular(20),
@@ -155,20 +166,29 @@ class ProductDetailsPage extends StatelessWidget {
                   // Specifications section
                   const Text(
                     "Specifications",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  
                   const SizedBox(height: 8),
-                  
-                  // Product specifications in a nicely formatted way
-                  _buildSpecRow(Icons.check_circle_outline, "Condition", "Good"),
-                  _buildSpecRow(Icons.local_shipping_outlined, "Delivery", "Available"),
-                  _buildSpecRow(Icons.payments_outlined, "Payment Methods", "UPI / COD"),
-                  _buildSpecRow(Icons.location_on_outlined, "Location", "Available for pickup"),
-                  
+                  _buildSpecRow(
+                    Icons.check_circle_outline,
+                    "Condition",
+                    "Good",
+                  ),
+                  _buildSpecRow(
+                    Icons.local_shipping_outlined,
+                    "Delivery",
+                    "Available",
+                  ),
+                  _buildSpecRow(
+                    Icons.payments_outlined,
+                    "Payment Methods",
+                    "UPI / COD",
+                  ),
+                  _buildSpecRow(
+                    Icons.location_on_outlined,
+                    "Location",
+                    "Available for pickup",
+                  ),
                   const SizedBox(height: 16),
                   
                   // Seller information
@@ -199,11 +219,17 @@ class ProductDetailsPage extends StatelessWidget {
                               ),
                               Row(
                                 children: [
-                                  const Icon(Icons.star, color: Colors.amber, size: 16),
+                                  const Icon(
+                                    Icons.star,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 4),
                                   const Text(
                                     "4.8",
-                                    style: TextStyle(fontWeight: FontWeight.w500),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
@@ -221,8 +247,7 @@ class ProductDetailsPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
-                  const SizedBox(height: 80), // Space for the buttons at bottom
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
@@ -249,7 +274,12 @@ class ProductDetailsPage extends StatelessWidget {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
-                  _showMakeOfferDialog(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const OffersNegotiationsPage(),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -293,9 +323,7 @@ class ProductDetailsPage extends StatelessWidget {
                     SizedBox(width: 8),
                     Text(
                       "Chat Now",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -317,70 +345,11 @@ class ProductDetailsPage extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             "$label: ",
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(value, style: const TextStyle(fontSize: 14)),
         ],
       ),
-    );
-  }
-
-  // Dialog to make an offer
-  void _showMakeOfferDialog(BuildContext context) {
-    TextEditingController offerController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Make an Offer'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Current Price: ₹${price.toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: offerController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Your Offer (₹)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.currency_rupee),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                if (offerController.text.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Offer of ₹${offerController.text} sent to seller')),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-              ),
-              child: const Text('Send Offer'),
-            ),
-          ],
-        );
-      },
     );
   }
 }
