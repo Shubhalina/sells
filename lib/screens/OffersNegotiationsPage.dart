@@ -67,16 +67,24 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
     }
   }
 
-  Widget _statusChip(String status) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: _statusColor(status).withOpacity(.15),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(status[0].toUpperCase() + status.substring(1),
-            style: TextStyle(
-                color: _statusColor(status), fontWeight: FontWeight.w600)),
-      );
+  Widget _statusChip(String status) {
+  final color = _statusColor(status);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      status[0].toUpperCase() + status.substring(1),
+      style: TextStyle(
+        fontSize: 12,
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+}
 
   Widget _offerCard(Map<String, dynamic> offer) {
     final currency = NumberFormat.simpleCurrency().format(offer['offer_price']);
@@ -159,20 +167,24 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
   }
 
   Widget _actionBtn({required String label, required Color color, required VoidCallback onTap}) =>
-      Expanded(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            backgroundColor: color,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
-            onPressed: onTap,
-            child: Text(label),
           ),
+          onPressed: onTap,
+          child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
         ),
-      );
+      ),
+    );
+
 
   Future<void> _counterOffer(Map<String, dynamic> offer) async {
     final newPrice = (offer['offer_price'] * (1 + Random().nextInt(10) / 100)).round();
@@ -242,7 +254,7 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
                             padding: EdgeInsets.zero,
                             children: [
                               if (_active.isNotEmpty)
-                                _sectionHeader('Active Offers (\${_active.length})'),
+                                _sectionHeader('Active Offers (${_active.length})'),
                               ..._active.map(_offerCard),
                               if (_previous.isNotEmpty)
                                 _sectionHeader('Previous Offers (\${_previous.length})'),
