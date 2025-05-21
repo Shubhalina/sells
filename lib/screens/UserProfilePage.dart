@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sells/screens/UserProfilePage.dart'; // adjust path as needed
-
 
 class UserProfileScreen extends StatelessWidget {
-  final user = Supabase.instance.client.auth.currentUser;
+  const UserProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+
     return Scaffold(
       appBar: AppBar(toolbarHeight: 0, elevation: 0),
       body: SafeArea(
@@ -18,30 +18,44 @@ class UserProfileScreen extends StatelessWidget {
             children: [
               const CircleAvatar(
                 radius: 40,
-                backgroundImage: AssetImage('assets/profile.jpg'),
+                backgroundImage: AssetImage('assets/images/usericon.png'),
               ),
               const SizedBox(height: 8),
-              const Text('John Smith', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const Text('john.smith@email.com', style: TextStyle(color: Colors.grey)),
+              Text(
+                user?.userMetadata?['full_name'] ?? 'User',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                user?.email ?? 'email@example.com',
+                style: const TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 12),
-              OutlinedButton(onPressed: () {}, child: const Text('Edit Profile')),
+              OutlinedButton(
+                onPressed: () {
+                  // Edit profile action
+                },
+                child: const Text('Edit Profile'),
+              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildStat('Total Sales', '\$1,245'),
-                  _buildStat('Active Listings', '8'),
+                  _buildStat('Listings', '8'),
                   _buildStat('Reviews', '4.8 ⭐'),
                 ],
               ),
               const SizedBox(height: 20),
-              _buildNavBar(),
+              _buildNavBar(context),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildQuickAction(Icons.add, 'Add New Listing'),
-                  _buildQuickAction(Icons.bar_chart, 'View Analytics'),
+                  _buildQuickAction(Icons.add, 'Add Listing'),
+                  _buildQuickAction(Icons.bar_chart, 'Analytics'),
                   _buildQuickAction(Icons.support_agent, 'Support'),
                 ],
               ),
@@ -52,9 +66,17 @@ class UserProfileScreen extends StatelessWidget {
               const SizedBox(height: 20),
               _buildSectionTitle('Recent Activity'),
               const SizedBox(height: 10),
-              _buildActivity('New Order Received', 'Order #12345 - Smart Watch', '2 hours ago'),
-              _buildActivity('Payment Completed', 'Transaction ID: 987654', '5 hours ago'),
-              _buildActivity('Listing Updated', 'Wireless Headphones - Price Changed', '1 day ago'),
+              _buildActivity(
+                'New Order',
+                'Order #12345 - Smart Watch',
+                '2h ago',
+              ),
+              _buildActivity('Payment', 'Txn ID: 987654', '5h ago'),
+              _buildActivity(
+                'Listing Updated',
+                'Headphones price updated',
+                '1d ago',
+              ),
             ],
           ),
         ),
@@ -65,22 +87,37 @@ class UserProfileScreen extends StatelessWidget {
   Widget _buildStat(String title, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         const SizedBox(height: 4),
         Text(title, style: const TextStyle(color: Colors.grey)),
       ],
     );
   }
 
-  Widget _buildNavBar() {
+  Widget _buildNavBar(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildNavIcon(Icons.list, 'My Listings'),
-        _buildNavIcon(Icons.history, 'Purchase History'),
-        _buildNavIcon(Icons.payment, 'Payment Methods'),
+        _buildNavIcon(Icons.history, 'History'),
+        _buildNavIcon(Icons.payment, 'Payments'),
         _buildNavIcon(Icons.settings, 'Settings'),
-        _buildNavIcon(Icons.logout, 'Logout'),
+        GestureDetector(
+          onTap: () async {
+            await Supabase.instance.client.auth.signOut();
+            if (context.mounted) {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (_) => false,
+              );
+            }
+          },
+          child: _buildNavIcon(Icons.logout, 'Logout'),
+        ),
       ],
     );
   }
@@ -90,7 +127,7 @@ class UserProfileScreen extends StatelessWidget {
       children: [
         Icon(icon, size: 28, color: Colors.blue),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12))
+        Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -104,7 +141,7 @@ class UserProfileScreen extends StatelessWidget {
           child: Icon(icon, color: Colors.blue),
         ),
         const SizedBox(height: 6),
-        Text(label, style: const TextStyle(fontSize: 12))
+        Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -112,7 +149,10 @@ class UserProfileScreen extends StatelessWidget {
   Widget _buildSectionTitle(String title) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      child: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+      ),
     );
   }
 
@@ -122,14 +162,19 @@ class UserProfileScreen extends StatelessWidget {
       runSpacing: 12,
       children: [
         _buildListingCard('Smart Watch', '\$299', 'assets/watch.jpg', true),
-        _buildListingCard('Wireless Headphones', '\$199', 'assets/headphones.jpg', true),
+        _buildListingCard('Headphones', '\$199', 'assets/headphones.jpg', true),
         _buildListingCard('Camera Lens', '\$499', 'assets/camera.jpg', false),
         _buildListingCard('Sunglasses', '\$129', 'assets/sunglasses.jpg', true),
       ],
     );
   }
 
-  Widget _buildListingCard(String title, String price, String imgPath, bool isActive) {
+  Widget _buildListingCard(
+    String title,
+    String price,
+    String imgPath,
+    bool isActive,
+  ) {
     return Container(
       width: 160,
       padding: const EdgeInsets.all(8),
@@ -143,7 +188,12 @@ class UserProfileScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.asset(imgPath, height: 100, width: double.infinity, fit: BoxFit.cover),
+            child: Image.asset(
+              imgPath,
+              height: 100,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
           ),
           const SizedBox(height: 6),
           Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -156,9 +206,12 @@ class UserProfileScreen extends StatelessWidget {
                 color: isActive ? Colors.green.shade100 : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(isActive ? 'Active' : 'Sold', style: const TextStyle(fontSize: 10)),
+              child: Text(
+                isActive ? 'Active' : 'Sold',
+                style: const TextStyle(fontSize: 10),
+              ),
             ),
-          )
+          ),
         ],
       ),
     );

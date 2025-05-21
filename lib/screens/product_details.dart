@@ -149,9 +149,9 @@ class ProductDetailsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Title and description
                   Text(
                     title,
@@ -160,9 +160,9 @@ class ProductDetailsPage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Specifications section
                   const Text(
                     "Specifications",
@@ -190,7 +190,7 @@ class ProductDetailsPage extends StatelessWidget {
                     "Available for pickup",
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Seller information
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -202,7 +202,9 @@ class ProductDetailsPage extends StatelessWidget {
                       children: [
                         const CircleAvatar(
                           radius: 24,
-                          backgroundImage: AssetImage('assets/images/user.jpg'),
+                          backgroundImage: AssetImage(
+                            'assets/images/usericon.png',
+                          ),
                           backgroundColor: Colors.grey,
                         ),
                         const SizedBox(width: 12),
@@ -254,7 +256,7 @@ class ProductDetailsPage extends StatelessWidget {
           ),
         ],
       ),
-      
+
       // Bottom action buttons
       bottomSheet: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

@@ -32,8 +32,6 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
 
       final fetched = List<Map<String, dynamic>>.from(rows);
 
-      if (fetched.isEmpty) fetched.addAll(_demoOffers());
-
       setState(() {
         _offers = fetched;
         _loading = false;
@@ -47,7 +45,10 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
   }
 
   Future<void> _updateStatus(String id, String newStatus) async {
-    await supabase.from('offers').update({'status': newStatus}).eq('offer_id', id);
+    await supabase
+        .from('offers')
+        .update({'status': newStatus})
+        .eq('offer_id', id);
     await _fetchOffers();
   }
 
@@ -68,23 +69,23 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
   }
 
   Widget _statusChip(String status) {
-  final color = _statusColor(status);
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-      status[0].toUpperCase() + status.substring(1),
-      style: TextStyle(
-        fontSize: 12,
-        color: color,
-        fontWeight: FontWeight.w600,
+    final color = _statusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
       ),
-    ),
-  );
-}
+      child: Text(
+        status[0].toUpperCase() + status.substring(1),
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
 
   Widget _offerCard(Map<String, dynamic> offer) {
     final currency = NumberFormat.simpleCurrency().format(offer['offer_price']);
@@ -111,13 +112,17 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 48,
-                      height: 48,
-                      color: Colors.grey.shade300,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.storefront, color: Colors.white70),
-                    ),
+                    errorBuilder:
+                        (_, __, ___) => Container(
+                          width: 48,
+                          height: 48,
+                          color: Colors.grey.shade300,
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.storefront,
+                            color: Colors.white70,
+                          ),
+                        ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -125,12 +130,20 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(offer['company_name'] ?? 'Company',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15)),
-                      Text(offer['position'] ?? offer['message'] ?? '',
-                          style: TextStyle(
-                              color: Colors.grey.shade600, fontSize: 13)),
+                      Text(
+                        offer['company_name'] ?? 'Company',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      Text(
+                        offer['position'] ?? offer['message'] ?? '',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -138,27 +151,42 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(currency,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              currency,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
                 const Icon(Icons.access_time, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text('Received $received',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                Text(
+                  'Received $received',
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                ),
               ],
             ),
             if (status == 'pending') ...[
               const SizedBox(height: 12),
-              Row(children: [
-                _actionBtn(label: 'Accept', color: Colors.green,
-                    onTap: () => _updateStatus(offer['offer_id'], 'accepted')),
-                _actionBtn(label: 'Counter', color: Colors.blue,
-                    onTap: () => _counterOffer(offer)),
-                _actionBtn(label: 'Decline', color: Colors.grey.shade800,
-                    onTap: () => _updateStatus(offer['offer_id'], 'declined')),
-              ])
+              Row(
+                children: [
+                  _actionBtn(
+                    label: 'Accept',
+                    color: Colors.green,
+                    onTap: () => _updateStatus(offer['offer_id'], 'accepted'),
+                  ),
+                  _actionBtn(
+                    label: 'Counter',
+                    color: Colors.blue,
+                    onTap: () => _counterOffer(offer),
+                  ),
+                  _actionBtn(
+                    label: 'Decline',
+                    color: Colors.grey.shade800,
+                    onTap: () => _updateStatus(offer['offer_id'], 'declined'),
+                  ),
+                ],
+              ),
             ],
           ],
         ),
@@ -166,28 +194,29 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
     );
   }
 
-  Widget _actionBtn({required String label, required Color color, required VoidCallback onTap}) =>
-    Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            backgroundColor: color,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onPressed: onTap,
-          child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+  Widget _actionBtn({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) => Expanded(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
+        onPressed: onTap,
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
       ),
-    );
-
+    ),
+  );
 
   Future<void> _counterOffer(Map<String, dynamic> offer) async {
-    final newPrice = (offer['offer_price'] * (1 + Random().nextInt(10) / 100)).round();
+    final newPrice =
+        (offer['offer_price'] * (1 + Random().nextInt(10) / 100)).round();
     await supabase.from('offers').insert({
       'offer_id': UniqueKey().toString(),
       'company_name': offer['company_name'],
@@ -200,38 +229,18 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
     });
     await _fetchOffers();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Counter offer sent')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Counter offer sent')));
   }
 
   Widget _sectionHeader(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(text,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-      );
-
-  List<Map<String, dynamic>> _demoOffers() => [
-        {
-          'offer_id': '1',
-          'company_name': 'Acme Corp',
-          'position': 'Software Engineer',
-          'image_url': null,
-          'offer_price': 120000,
-          'date_time': DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
-          'status': 'pending',
-          'message': 'Initial offer'
-        },
-        {
-          'offer_id': '2',
-          'company_name': 'Beta Inc',
-          'position': 'Data Analyst',
-          'image_url': null,
-          'offer_price': 95000,
-          'date_time': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-          'status': 'declined',
-          'message': 'Initial offer'
-        },
-      ];
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -239,47 +248,59 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
       appBar: AppBar(
         title: const Text('Offers & Negotiations'),
         leading: const BackButton(),
-        actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.filter_list_rounded))],
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.filter_list_rounded),
+          ),
+        ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
               ? Center(child: Text('Error: $_error'))
               : _offers.isEmpty
-                  ? const Center(child: Text('No offers yet'))
-                  : Column(
+              ? const Center(child: Text('No offers yet'))
+              : Column(
+                children: [
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
                       children: [
-                        Expanded(
-                          child: ListView(
-                            padding: EdgeInsets.zero,
-                            children: [
-                              if (_active.isNotEmpty)
-                                _sectionHeader('Active Offers (${_active.length})'),
-                              ..._active.map(_offerCard),
-                              if (_previous.isNotEmpty)
-                                _sectionHeader('Previous Offers (\${_previous.length})'),
-                              ..._previous.map(_offerCard),
-                            ],
+                        if (_active.isNotEmpty)
+                          _sectionHeader('Active Offers (${_active.length})'),
+                        ..._active.map(_offerCard),
+                        if (_previous.isNotEmpty)
+                          _sectionHeader(
+                            'Previous Offers (${_previous.length})',
                           ),
-                        ),
-                        SafeArea(
-                          minimum: const EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                backgroundColor: Colors.blue,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10)),
-                              ),
-                              child: const Text('Continue', style: TextStyle(fontSize: 16)),
-                            ),
-                          ),
-                        ),
+                        ..._previous.map(_offerCard),
                       ],
                     ),
+                  ),
+                  SafeArea(
+                    minimum: const EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.blue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Continue',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
     );
   }
 }

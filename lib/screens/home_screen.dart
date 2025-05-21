@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sells/screens/AddProductPage.dart';
 import 'package:sells/screens/product_details.dart';
+import 'package:sells/screens/UserProfilePage.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,9 +12,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final categories = ['Electronics', 'Fashion', 'Home', 'Accessories', 'Books'];
+  final categories = [
+    'All',
+    'Electronics',
+    'Fashion',
+    'Home',
+    'Accessories',
+    'Books',
+  ];
 
   final categoryIcons = {
+    'All': Icons.apps,
     'Electronics': Icons.electrical_services,
     'Fashion': Icons.checkroom,
     'Home': Icons.home,
@@ -21,14 +30,21 @@ class _HomeScreenState extends State<HomeScreen> {
     'Books': Icons.menu_book,
   };
 
-  List<Map<String, dynamic>> products = [];
+  List<Map<String, dynamic>> allProducts = [];
+  List<Map<String, dynamic>> filteredProducts = [];
+  String selectedCategory = 'All';
   bool isLoading = true;
 
   Future<void> fetchProducts() async {
     try {
-      final response = await Supabase.instance.client.from('products').select();
+      final response =
+          await Supabase.instance.client
+              .from('products')
+              .select(); // fetch all products regardless of user
+
       setState(() {
-        products = List<Map<String, dynamic>>.from(response);
+        allProducts = List<Map<String, dynamic>>.from(response);
+        filterProducts(); // Apply category filter
         isLoading = false;
       });
     } catch (e) {
@@ -36,6 +52,21 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  void filterProducts() {
+    if (selectedCategory == 'All') {
+      filteredProducts = [...allProducts];
+    } else {
+      filteredProducts =
+          allProducts
+              .where(
+                (product) =>
+                    product['category']?.toString().toLowerCase() ==
+                    selectedCategory.toLowerCase(),
+              )
+              .toList();
     }
   }
 
@@ -51,12 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: const Padding(
-          padding: EdgeInsets.all(8),
-          child: CircleAvatar(
-            backgroundImage: AssetImage('assets/images/user.jpg'),
+        leading: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => UserProfileScreen()),
+            );
+          },
+          child: const Padding(
+            padding: EdgeInsets.all(8),
+            child: CircleAvatar(
+              backgroundImage: AssetImage('assets/images/usericon.png'),
+            ),
           ),
         ),
+
         title: Padding(
           padding: const EdgeInsets.only(right: 8),
           child: TextField(
@@ -90,23 +130,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 separatorBuilder: (context, _) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
                   final category = categories[index];
-                  return Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.blue.shade50,
-                        child: Icon(
-                          categoryIcons[category],
-                          color: Colors.blue,
+                  final isSelected = selectedCategory == category;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedCategory = category;
+                        filterProducts();
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor:
+                              isSelected ? Colors.blue : Colors.blue.shade50,
+                          child: Icon(
+                            categoryIcons[category],
+                            color: isSelected ? Colors.white : Colors.blue,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        category,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                            color: isSelected ? Colors.blue : Colors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -119,84 +177,99 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             isLoading
                 ? const Center(child: CircularProgressIndicator())
+                : filteredProducts.isEmpty
+                ? const Center(child: Text("No products found."))
                 : GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: products.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      // Safely parse the price, defaulting to 0 if null or not a number
-                      final price = product['price'] != null 
-                          ? (product['price'] is num 
-                              ? product['price'] 
-                              : double.tryParse(product['price'].toString()) ?? 0) 
-                          : 0;
-                      
-                      return InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProductDetailsPage(
-                                title: product['product_title'] ?? '',
-                                price: price is double ? price : price.toDouble(),
-                                image: product['product_image'] ?? '',
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredProducts.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.75,
+                  ),
+                  itemBuilder: (context, index) {
+                    final product = filteredProducts[index];
+                    final price =
+                        product['price'] != null
+                            ? (product['price'] is num
+                                ? product['price']
+                                : double.tryParse(
+                                      product['price'].toString(),
+                                    ) ??
+                                    0)
+                            : 0;
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => ProductDetailsPage(
+                                  title: product['product_title'] ?? '',
+                                  price: price.toDouble(),
+                                  image: product['product_image'] ?? '',
+                                ),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(12),
+                                ),
+                                child: Image.network(
+                                  product['product_image'] ?? '',
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder:
+                                      (_, __, ___) =>
+                                          const Icon(Icons.image, size: 60),
+                                ),
                               ),
                             ),
-                          );
-                        },
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                  child: Image.network(
-                                    product['product_image'] ?? '',
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 60),
+                            Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product['product_title'] ?? '',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "₹${price.toString()}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Text(
+                                    "Negotiable",
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      product['product_title'] ?? '',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "₹${price.toString()}",
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    const Text(
-                                      "Negotiable",
-                                      style: TextStyle(color: Colors.blue, fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                ),
           ],
         ),
       ),
