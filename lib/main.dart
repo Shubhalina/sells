@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/splash_screen.dart';
-// import 'package:sells/screens/signup_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/UserProfilePage.dart';
+
+import 'screens/UserProfilePage.dart'; // Keep the correct case used in your project
+import 'screens/paymentscreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,11 @@ class RebuyApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
+        '/payment': (context) => const PaymentScreen(
+          subtotal: 229.99,
+          deliveryFee: 5.00,
+          tax: 15.00,
+        ),
         '/user_profile': (context) => const UserProfileScreen(),
       },
     );
