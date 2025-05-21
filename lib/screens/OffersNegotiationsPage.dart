@@ -32,6 +32,8 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
 
       final fetched = List<Map<String, dynamic>>.from(rows);
 
+      if (fetched.isEmpty) fetched.addAll(_demoOffers());
+
       setState(() {
         _offers = fetched;
         _loading = false;
@@ -242,6 +244,31 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
     ),
   );
 
+  List<Map<String, dynamic>> _demoOffers() => [
+    {
+      'offer_id': '1',
+      'company_name': 'Acme Corp',
+      'position': 'Software Engineer',
+      'image_url': null,
+      'offer_price': 120000,
+      'date_time':
+          DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
+      'status': 'pending',
+      'message': 'Initial offer',
+    },
+    {
+      'offer_id': '2',
+      'company_name': 'Beta Inc',
+      'position': 'Data Analyst',
+      'image_url': null,
+      'offer_price': 95000,
+      'date_time':
+          DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+      'status': 'declined',
+      'message': 'Initial offer',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -273,7 +300,7 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
                         ..._active.map(_offerCard),
                         if (_previous.isNotEmpty)
                           _sectionHeader(
-                            'Previous Offers (${_previous.length})',
+                            'Previous Offers (\${_previous.length})',
                           ),
                         ..._previous.map(_offerCard),
                       ],
