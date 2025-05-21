@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sells/screens/Feedback_Screen.dart';
+import 'package:sells/screens/OffersNegotiationsPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/splash_screen.dart';
 import 'screens/signup_screen.dart';
@@ -39,6 +41,10 @@ class RebuyApp extends StatelessWidget {
           tax: 15.00,
         ),
         '/user_profile': (context) => const UserProfileScreen(),
+        '/feedback': (context) => const FeedbackScreen(),
+        '/offers_negotiations': (context) => const OffersNegotiationsPage(
+          productId: '12345', // Replace with actual product ID
+        ),
       },
     );
   }

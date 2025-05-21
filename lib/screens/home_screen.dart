@@ -206,14 +206,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder:
-                                (context) => ProductDetailsPage(
-                                  title: product['product_title'] ?? '',
-                                  price: price.toDouble(),
-                                  image: product['product_image'] ?? '',
-                                ),
+                            builder: (context) => ProductDetailsPage(
+                              productId: product['id'],
+                              title: product['product_title'],
+                              price: product['price'],
+                              image: product['product_image'],
+                            ),
                           ),
                         );
+
                       },
                       child: Card(
                         shape: RoundedRectangleBorder(

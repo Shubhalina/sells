@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-// import 'offers_negotiations_page.dart'; // <-- Update this path as needed
 import 'package:sells/screens/OffersNegotiationsPage.dart';
 
 class ProductDetailsPage extends StatelessWidget {
+  final String productId;
   final String title;
   final double price;
   final String image;
 
   const ProductDetailsPage({
     super.key,
+    required this.productId,
     required this.title,
     required this.price,
     required this.image,
@@ -19,7 +20,6 @@ class ProductDetailsPage extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // Custom app bar with image
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
@@ -28,20 +28,18 @@ class ProductDetailsPage extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Product image
                   Hero(
                     tag: 'product-$title',
                     child: Image.network(
                       image,
                       fit: BoxFit.cover,
-                      errorBuilder:
-                          (context, error, stackTrace) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              size: 80,
-                            ),
-                          ),
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          size: 80,
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -99,15 +97,12 @@ class ProductDetailsPage extends StatelessWidget {
               ),
             ],
           ),
-
-          // Product details
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Price and negotiable tag
                   Row(
                     children: [
                       Container(
@@ -149,10 +144,7 @@ class ProductDetailsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
-                  // Title and description
                   Text(
                     title,
                     style: const TextStyle(
@@ -160,38 +152,17 @@ class ProductDetailsPage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // Specifications section
                   const Text(
                     "Specifications",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  _buildSpecRow(
-                    Icons.check_circle_outline,
-                    "Condition",
-                    "Good",
-                  ),
-                  _buildSpecRow(
-                    Icons.local_shipping_outlined,
-                    "Delivery",
-                    "Available",
-                  ),
-                  _buildSpecRow(
-                    Icons.payments_outlined,
-                    "Payment Methods",
-                    "UPI / COD",
-                  ),
-                  _buildSpecRow(
-                    Icons.location_on_outlined,
-                    "Location",
-                    "Available for pickup",
-                  ),
+                  _buildSpecRow(Icons.check_circle_outline, "Condition", "Good"),
+                  _buildSpecRow(Icons.local_shipping_outlined, "Delivery", "Available"),
+                  _buildSpecRow(Icons.payments_outlined, "Payment Methods", "UPI / COD"),
+                  _buildSpecRow(Icons.location_on_outlined, "Location", "Available for pickup"),
                   const SizedBox(height: 16),
-
-                  // Seller information
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -202,9 +173,7 @@ class ProductDetailsPage extends StatelessWidget {
                       children: [
                         const CircleAvatar(
                           radius: 24,
-                          backgroundImage: AssetImage(
-                            'assets/images/usericon.png',
-                          ),
+                          backgroundImage: AssetImage('assets/images/usericon.png'),
                           backgroundColor: Colors.grey,
                         ),
                         const SizedBox(width: 12),
@@ -221,18 +190,9 @@ class ProductDetailsPage extends StatelessWidget {
                               ),
                               Row(
                                 children: [
-                                  const Icon(
-                                    Icons.star,
-                                    color: Colors.amber,
-                                    size: 16,
-                                  ),
+                                  const Icon(Icons.star, color: Colors.amber, size: 16),
                                   const SizedBox(width: 4),
-                                  const Text(
-                                    "4.8",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
+                                  const Text("4.8", style: TextStyle(fontWeight: FontWeight.w500)),
                                   const SizedBox(width: 8),
                                   Text(
                                     "Active since June 2024",
@@ -256,8 +216,6 @@ class ProductDetailsPage extends StatelessWidget {
           ),
         ],
       ),
-
-      // Bottom action buttons
       bottomSheet: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -272,14 +230,13 @@ class ProductDetailsPage extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Make an offer button
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const OffersNegotiationsPage(),
+                      builder: (context) => OffersNegotiationsPage(productId: productId),
                     ),
                   );
                 },
@@ -301,11 +258,9 @@ class ProductDetailsPage extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Chat now button
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
-                  // Navigate to chat screen
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Opening chat with seller')),
                   );
@@ -337,7 +292,6 @@ class ProductDetailsPage extends StatelessWidget {
     );
   }
 
-  // Helper method to build specification rows
   Widget _buildSpecRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),

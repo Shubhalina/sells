@@ -5,7 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class OffersNegotiationsPage extends StatefulWidget {
-  const OffersNegotiationsPage({super.key});
+  final String productId;
+
+  const OffersNegotiationsPage({super.key, required this.productId});
 
   @override
   State<OffersNegotiationsPage> createState() => _OffersNegotiationsPageState();
@@ -25,17 +27,30 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
 
   Future<void> _fetchOffers() async {
     try {
-      final rows = await supabase
+      final offersData = await supabase
           .from('offers')
           .select('*')
+          .eq('product_id', widget.productId) // FILTER BY product_id
           .order('date_time', ascending: false);
 
-      final fetched = List<Map<String, dynamic>>.from(rows);
+      // Fetch product details for the productId (optional if you want to show product info)
+      final productsData = await supabase
+          .from('products')
+          .select('*')
+          .eq('product_id', widget.productId)
+          .single();
 
-      if (fetched.isEmpty) fetched.addAll(_demoOffers());
+      final enrichedOffers = List<Map<String, dynamic>>.from(offersData).map((offer) {
+        return {
+          ...offer,
+          'product_title': productsData['title'] ?? 'Unknown Product',
+          'product_image': productsData['image_url'] ?? 'https://via.placeholder.com/150',
+          'product_price': productsData['price'] ?? 0,
+        };
+      }).toList();
 
       setState(() {
-        _offers = fetched;
+        _offers = enrichedOffers;
         _loading = false;
       });
     } catch (e) {
@@ -104,27 +119,21 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    offer['image_url'] ??
-                        'https://picsum.photos/seed/${offer['offer_id']}/80',
+                    offer['product_image'],
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
-                    errorBuilder:
-                        (_, __, ___) => Container(
-                          width: 48,
-                          height: 48,
-                          color: Colors.grey.shade300,
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.storefront,
-                            color: Colors.white70,
-                          ),
-                        ),
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 48,
+                      height: 48,
+                      color: Colors.grey.shade300,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.storefront, color: Colors.white70),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -133,14 +142,14 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        offer['company_name'] ?? 'Company',
+                        offer['product_title'],
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
                       ),
                       Text(
-                        offer['position'] ?? offer['message'] ?? '',
+                        offer['message'] ?? '',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 13,
@@ -200,30 +209,31 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
     required String label,
     required Color color,
     required VoidCallback onTap,
-  }) => Expanded(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  }) =>
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: onTap,
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          ),
         ),
-        onPressed: onTap,
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-      ),
-    ),
-  );
+      );
 
   Future<void> _counterOffer(Map<String, dynamic> offer) async {
     final newPrice =
         (offer['offer_price'] * (1 + Random().nextInt(10) / 100)).round();
+
     await supabase.from('offers').insert({
       'offer_id': UniqueKey().toString(),
-      'company_name': offer['company_name'],
-      'position': offer['position'],
-      'image_url': offer['image_url'],
+      'product_id': widget.productId,
       'offer_price': newPrice,
       'date_time': DateTime.now().toIso8601String(),
       'status': 'pending',
@@ -237,37 +247,12 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
   }
 
   Widget _sectionHeader(String text) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-    ),
-  );
-
-  List<Map<String, dynamic>> _demoOffers() => [
-    {
-      'offer_id': '1',
-      'company_name': 'Acme Corp',
-      'position': 'Software Engineer',
-      'image_url': null,
-      'offer_price': 120000,
-      'date_time':
-          DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
-      'status': 'pending',
-      'message': 'Initial offer',
-    },
-    {
-      'offer_id': '2',
-      'company_name': 'Beta Inc',
-      'position': 'Data Analyst',
-      'image_url': null,
-      'offer_price': 95000,
-      'date_time':
-          DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-      'status': 'declined',
-      'message': 'Initial offer',
-    },
-  ];
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -275,59 +260,35 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
       appBar: AppBar(
         title: const Text('Offers & Negotiations'),
         leading: const BackButton(),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.filter_list_rounded),
-          ),
-        ],
       ),
-      body:
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
               ? Center(child: Text('Error: $_error'))
-              : _offers.isEmpty
-              ? const Center(child: Text('No offers yet'))
-              : Column(
-                children: [
-                  Expanded(
-                    child: ListView(
-                      padding: EdgeInsets.zero,
-                      children: [
-                        if (_active.isNotEmpty)
-                          _sectionHeader('Active Offers (${_active.length})'),
-                        ..._active.map(_offerCard),
-                        if (_previous.isNotEmpty)
-                          _sectionHeader(
-                            'Previous Offers (\${_previous.length})',
-                          ),
-                        ..._previous.map(_offerCard),
-                      ],
-                    ),
+              : RefreshIndicator(
+                  onRefresh: _fetchOffers,
+                  child: ListView(
+                    children: [
+                      _sectionHeader('Active Offers'),
+                      if (_active.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('No active offers'),
+                        )
+                      else
+                        ..._active.map(_offerCard).toList(),
+                      _sectionHeader('Previous Offers'),
+                      if (_previous.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('No previous offers'),
+                        )
+                      else
+                        ..._previous.map(_offerCard).toList(),
+                      const SizedBox(height: 16),
+                    ],
                   ),
-                  SafeArea(
-                    minimum: const EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.blue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          'Continue',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
     );
   }
 }
