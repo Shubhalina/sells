@@ -8,7 +8,7 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
 import 'screens/UserProfilePage.dart'; // Keep the correct case used in your project
-import 'screens/paymentscreen.dart';
+import 'screens/PaymentScreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,16 +35,10 @@ class RebuyApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
-        '/payment': (context) => const PaymentScreen(
-          subtotal: 229.99,
-          deliveryFee: 5.00,
-          tax: 15.00,
-        ),
+        '/payment': (context) => const PaymentScreen(),
         '/user_profile': (context) => const UserProfileScreen(),
         '/feedback': (context) => const FeedbackScreen(),
-        '/offers_negotiations': (context) => const OffersNegotiationsPage(
-          productId: '12345', // Replace with actual product ID
-        ),
+        '/offers_negotiations': (context) => const OffersNegotiationsPage(),
       },
     );
   }
