@@ -152,6 +152,7 @@ class UserProfileScreen extends StatelessWidget {
       child: Text(
         title,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+         
       ),
     );
   }
@@ -161,10 +162,10 @@ class UserProfileScreen extends StatelessWidget {
       spacing: 12,
       runSpacing: 12,
       children: [
-        _buildListingCard('Smart Watch', '\$299', 'assets/watch.jpg', true),
-        _buildListingCard('Headphones', '\$199', 'assets/headphones.jpg', true),
-        _buildListingCard('Camera Lens', '\$499', 'assets/camera.jpg', false),
-        _buildListingCard('Sunglasses', '\$129', 'assets/sunglasses.jpg', true),
+        _buildListingCard('Smart Watch', '\$299', 'assets/images/smartwatch.jpg', true),
+        _buildListingCard('Headphones', '\$199', 'assets/images/headphone.jpg', true),
+        _buildListingCard('Camera Lens', '\$499', 'assets/images/camera lens.jpg', false),
+        _buildListingCard('Sunglasses', '\$129', 'assets/images/sunglass.jpg', true),
       ],
     );
   }
