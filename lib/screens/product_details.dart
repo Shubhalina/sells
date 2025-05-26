@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sells/screens/OffersNegotiationsPage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 class ProductDetailsPage extends StatefulWidget {
   final String title;
@@ -20,6 +22,8 @@ class ProductDetailsPage extends StatefulWidget {
     this.bestOffer,
     this.userId,
   });
+
+
 
   @override
   State<ProductDetailsPage> createState() => _ProductDetailsPageState();
