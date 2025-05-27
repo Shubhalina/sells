@@ -9,6 +9,7 @@ class PaymentScreen extends StatefulWidget {
   State<PaymentScreen> createState() => _PaymentScreenState();
 }
 
+
 class _PaymentScreenState extends State<PaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _cardNumberController = TextEditingController();
@@ -66,102 +67,131 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _processPayment() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isProcessing = true);
+  setState(() => _isProcessing = true);
 
-    try {
-      // Simulate payment processing
-      await Future.delayed(const Duration(seconds: 3));
+  try {
+    // Simulate payment processing
+    await Future.delayed(const Duration(seconds: 3));
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      // Show success dialog
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder:
-            (context) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Column(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.check_rounded,
-                      color: Colors.green.shade600,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Payment Successful!',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-              content: const Text(
-                'Your payment has been processed successfully. You will receive a confirmation email shortly.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              actions: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Go back to previous screen
-                    },
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Payment failed: $e'),
-          backgroundColor: Colors.red,
+    // Get the offer details from arguments
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final offerId = args?['offerId'];
+
+    // Here you would typically:
+    // 1. Process the actual payment with your payment provider
+    // 2. Update the offer status to 'purchased' in your database
+    // For demo purposes, we'll just show the success dialog
+
+    // Show success dialog
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
+        title: Column(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                color: Colors.green.shade600,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Payment Successful!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Your payment has been processed successfully.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+            if (offerId != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Order ID: ${offerId.toString().substring(0, 8)}',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            const Text(
+              'You will receive a confirmation email shortly.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous screen
+              },
+              child: const Text(
+                'Done',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Payment failed: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() => _isProcessing = false);
     }
   }
+}
+   @override
+Widget build(BuildContext context) {
+  final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+  final offer = args?['offer'];
+  final amount = args?['amount'] ?? 0;
+  final productTitle = args?['productTitle'] ?? 'Unknown Product';
+  final productImage = args?['productImage'];
+  final productDescription = args?['productDescription'];
+  final productCategory = args?['productCategory'];
 
-  @override
-  Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final offer = args?['offer'];
-    final amount = args?['amount'] ?? 0;
-    final productTitle = args?['productTitle'] ?? 'Unknown Product';
-    final productImage = args?['productImage'];
-
-    return Scaffold(
+  return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -190,7 +220,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Order Summary Card
-                    _buildOrderSummary(productTitle, productImage, amount),
+                    _buildOrderSummary(productTitle, productImage, amount, 
+                        productDescription, productCategory),
                     const SizedBox(height: 24),
 
                     // Payment Method Selection
@@ -274,109 +305,131 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildOrderSummary(
-    String productTitle,
-    String? productImage,
-    int amount,
-  ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child:
-                        productImage != null
-                            ? Image.network(
-                              productImage,
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              errorBuilder:
-                                  (_, __, ___) => Icon(
-                                    Icons.inventory_2_rounded,
-                                    color: Colors.grey.shade600,
-                                    size: 28,
-                                  ),
-                            )
-                            : Icon(
-                              Icons.inventory_2_rounded,
-                              color: Colors.grey.shade600,
-                              size: 28,
-                            ),
+ Widget _buildOrderSummary(
+  String productTitle,
+  String? productImage,
+  int amount,
+  String? productDescription,
+  String? productCategory,
+) {
+  return Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        productTitle,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                  child: productImage != null
+                      ? Image.network(
+                          productImage,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.inventory_2_rounded,
+                            color: Colors.grey.shade600,
+                            size: 28,
+                          ),
+                        )
+                      : Icon(
+                          Icons.inventory_2_rounded,
+                          color: Colors.grey.shade600,
+                          size: 28,
                         ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      productTitle,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
                       ),
+                    ),
+                    if (productCategory != null) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Accepted Offer',
+                        productCategory,
                         style: TextStyle(
-                          color: Colors.green.shade600,
+                          color: Colors.grey.shade600,
                           fontSize: 14,
-                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Accepted Offer',
+                      style: TextStyle(
+                        color: Colors.green.shade600,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  NumberFormat.simpleCurrency().format(amount),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                  ),
+              ),
+              Text(
+                NumberFormat.simpleCurrency().format(amount),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  NumberFormat.simpleCurrency().format(amount),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          if (productDescription != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              productDescription,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
-        ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              Text(
+                NumberFormat.simpleCurrency().format(amount),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSectionTitle(String title) {
     return Text(

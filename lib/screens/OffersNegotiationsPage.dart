@@ -4,8 +4,24 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+// In OffersNegotiationsPage.dart
 class OffersNegotiationsPage extends StatefulWidget {
-  const OffersNegotiationsPage({super.key});
+  final String? productId;
+  final String? productTitle;
+  final double? productPrice;
+  final String? productImage;
+  final String? productDescription;
+  final String? productCategory;
+
+  const OffersNegotiationsPage({
+    super.key,
+    this.productId,
+    this.productTitle,
+    this.productPrice,
+    this.productImage,
+    this.productDescription,
+    this.productCategory,
+  });
 
   @override
   State<OffersNegotiationsPage> createState() => _OffersNegotiationsPageState();
@@ -17,86 +33,199 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
   bool _loading = true;
   String? _error;
 
+  Future<void> _updateStatus(String offerId, String status) async {
+  try {
+    // Skip database update for demo offers
+    if (offerId.startsWith('demo_')) {
+      // Find and update the demo offer locally
+      setState(() {
+        _offers = _offers.map((offer) {
+          if (offer['offer_id'] == offerId) {
+            return {...offer, 'status': status};
+          }
+          return offer;
+        }).toList();
+      });
+
+      if (status == 'accepted') {
+        final acceptedOffer = _offers.firstWhere((offer) => offer['offer_id'] == offerId);
+        if (!mounted) return;
+        Navigator.pushNamed(
+          context,
+          '/payment',
+          arguments: {
+            'offer': acceptedOffer,
+            'amount': acceptedOffer['offer_price'],
+            'productTitle': acceptedOffer['products']?['product_title'] ?? 'Unknown Product',
+            'productImage': acceptedOffer['products']?['product_image'],
+          },
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Demo offer status updated to $status.'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+      return;
+    }
+
+    // For real offers, update in database
+    await supabase
+        .from('offers')
+        .update({'status': status})
+        .eq('offer_id', offerId);
+
+    final acceptedOffer = _offers.firstWhere((offer) => offer['offer_id'] == offerId);
+    
+    if (status == 'accepted') {
+      if (!mounted) return;
+      Navigator.pushNamed(
+        context,
+        '/payment',
+        arguments: {
+          'offer': acceptedOffer,
+          'amount': acceptedOffer['offer_price'],
+          'productTitle': acceptedOffer['products']?['product_title'] ?? 'Unknown Product',
+          'productImage': acceptedOffer['products']?['product_image'],
+        },
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Offer status updated to $status.'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    }
+    
+    await _fetchOffers();
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error updating status: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
   @override
   void initState() {
     super.initState();
     _fetchOffers();
   }
+Future<void> _fetchOffers() async {
+  try {
+    final query = widget.productId != null
+        ? supabase
+            .from('offers')
+            .select('''
+              offer_id,
+              product_id,
+              user_id,
+              offer_price,
+              status,
+              message,
+              date_time,
+              products (
+                id,
+                product_title,
+                product_image,
+                description,
+                category,
+                price
+              )
+            ''')
+            .eq('product_id', widget.productId!)
+            .order('date_time', ascending: false)
+        : supabase
+            .from('offers')
+            .select('''
+              offer_id,
+              product_id,
+              user_id,
+              offer_price,
+              status,
+              message,
+              date_time,
+              products (
+                id,
+                product_title,
+                product_image,
+                description,
+                category,
+                price
+              )
+            ''')
+            .order('date_time', ascending: false);
 
-  Future<void> _fetchOffers() async {
-    try {
-      // Fetch offers with product details using JOIN
-      final rows = await supabase
-          .from('offers')
-          .select('''
-            offer_id,
-            product_id,
-            user_id,
-            offer_price,
-            status,
-            message,
-            date_time,
-            products (
-              id,
-              product_title,
-              product_image,
-              description,
-              category,
-              price
-            )
-          ''')
-          .order('date_time', ascending: false);
+    final rows = await query;
 
-      final fetched = List<Map<String, dynamic>>.from(rows);
+    final fetched = List<Map<String, dynamic>>.from(rows);
 
-      // If no data from database, use demo data
-      if (fetched.isEmpty) {
-        fetched.addAll(_demoOffers());
-      }
-
-      setState(() {
-        _offers = fetched;
-        _loading = false;
-      });
-    } catch (e) {
-      // Fallback to demo data if there's an error
-      setState(() {
-        _offers = _demoOffers();
-        _loading = false;
-        _error = null; // Don't show error, just use demo data
-      });
+    // If no data from database and we have product details, create a demo offer
+    if (fetched.isEmpty && widget.productTitle != null) {
+      final demoId = 'demo_${DateTime.now().millisecondsSinceEpoch}';
+      fetched.addAll([
+        {
+          'offer_id': demoId,
+          'product_id': widget.productId ?? 'demo-product',
+          'user_id': 'demo-user',
+          'offer_price': widget.productPrice ?? 0,
+          'date_time': DateTime.now().toIso8601String(),
+          'status': 'pending',
+          'message': 'Initial offer',
+          'products': {
+            'id': widget.productId ?? 'demo-product',
+            'product_title': widget.productTitle ?? 'Unknown Product',
+            'product_image': widget.productImage,
+            'description': widget.productDescription,
+            'category': widget.productCategory ?? 'General',
+            'price': widget.productPrice ?? 0,
+          },
+        }
+      ]);
+    } else if (fetched.isEmpty) {
+      fetched.addAll(_demoOffers());
     }
-  }
 
-  Future<void> _updateStatus(String id, String newStatus) async {
-    try {
-      await supabase
-          .from('offers')
-          .update({'status': newStatus})
-          .eq('offer_id', id);
-      await _fetchOffers();
-
-      if (!mounted) return;
-      String message =
-          newStatus == 'accepted'
-              ? 'Offer accepted successfully!'
-              : 'Offer declined';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: newStatus == 'accepted' ? Colors.green : Colors.red,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating offer: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    setState(() {
+      _offers = fetched;
+      _loading = false;
+    });
+  } catch (e) {
+    setState(() {
+      _offers = widget.productTitle != null
+          ? [
+              {
+                'offer_id': 'demo_${DateTime.now().millisecondsSinceEpoch}',
+                'product_id': widget.productId ?? 'demo-product',
+                'user_id': 'demo-user',
+                'offer_price': widget.productPrice ?? 0,
+                'date_time': DateTime.now().toIso8601String(),
+                'status': 'pending',
+                'message': 'Initial offer',
+                'products': {
+                  'id': widget.productId ?? 'demo-product',
+                  'product_title': widget.productTitle ?? 'Unknown Product',
+                  'product_image': widget.productImage,
+                  'description': widget.productDescription,
+                  'category': widget.productCategory ?? 'General',
+                  'price': widget.productPrice ?? 0,
+                },
+              }
+            ]
+          : _demoOffers();
+      _loading = false;
+      _error = null;
+    });
   }
+}
 
   Future<void> _counterOffer(Map<String, dynamic> offer) async {
     final controller = TextEditingController();
@@ -179,32 +308,34 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
       }
     }
   }
-
-  Future<void> _buyNow(Map<String, dynamic> offer) async {
-    try {
-      // Navigate to payment screen with offer details
-      Navigator.pushNamed(
-        context,
-        '/payment',
-        arguments: {
-          'offer': offer,
-          'amount': offer['offer_price'],
-          'productTitle':
-              offer['products']?['product_title'] ?? 'Unknown Product',
-          'productImage': offer['products']?['product_image'],
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error navigating to payment: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+ 
+      Future<void> _buyNow(Map<String, dynamic> offer) async {
+      try {
+        // Navigate to payment screen with offer details
+        Navigator.pushNamed(
+          context,
+          '/payment',
+          arguments: {
+            'offer': offer,
+            'amount': offer['offer_price'],
+            'productTitle': offer['products']?['product_title'] ?? 'Unknown Product',
+            'productImage': offer['products']?['product_image'],
+            'productDescription': offer['products']?['description'],
+            'productCategory': offer['products']?['category'],
+            'sellerId': offer['user_id'],
+            'offerId': offer['offer_id'],
+          },
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error navigating to payment: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-  }
-
   List<Map<String, dynamic>> get _active =>
       _offers.where((e) => e['status'] == 'pending').toList();
 
@@ -387,6 +518,7 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
                     ),
                     elevation: 2,
                   ),
+                  // In the _offerCard widget's "Buy Now" button
                   onPressed: () => _buyNow(offer),
                   icon: const Icon(Icons.shopping_cart_rounded, size: 20),
                   label: const Text(
@@ -513,15 +645,21 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
       ),
     ),
   );
+// In OffersNegotiationsPage.dart, update the _demoOffers method
+List<Map<String, dynamic>> _demoOffers() {
+  // Generate UUID-like strings for demo purposes
+  String generateDemoId() {
+    final random = Random();
+    return '${random.nextInt(9999)}-${random.nextInt(9999)}-${random.nextInt(9999)}-${random.nextInt(9999)}';
+  }
 
-  List<Map<String, dynamic>> _demoOffers() => [
+  return [
     {
-      'offer_id': '1',
+      'offer_id': generateDemoId(),
       'product_id': 1,
       'user_id': 'demo-user',
       'offer_price': 130000,
-      'date_time':
-          DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+      'date_time': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
       'status': 'pending',
       'message': 'Initial offer',
       'products': {
@@ -606,144 +744,168 @@ class _OffersNegotiationsPageState extends State<OffersNegotiationsPage> {
       },
     },
   ];
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Offers & Negotiations',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.grey.shade50,
+    appBar: AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      title: Text(
+        widget.productTitle != null 
+            ? 'Offers for ${widget.productTitle}' 
+            : 'Offers & Negotiations',
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.w700,
+          fontSize: 18,
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              // TODO: Implement filter functionality
-            },
-            icon: const Icon(Icons.tune_rounded, color: Colors.black87),
-          ),
-        ],
       ),
-      body:
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Error: $_error'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _fetchOffers,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              )
-              : _offers.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.inbox_outlined,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No offers yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your offers will appear here',
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-              )
-              : Column(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        IconButton(
+          onPressed: () {
+            // TODO: Implement filter functionality
+          },
+          icon: const Icon(Icons.tune_rounded, color: Colors.black87),
+        ),
+      ],
+    ),
+    body:
+        _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      children: [
-                        if (_active.isNotEmpty) ...[
-                          _sectionHeader('Active Offers (${_active.length})'),
-                          ..._active.map(_offerCard),
-                        ],
-                        if (_previous.isNotEmpty) ...[
-                          _sectionHeader(
-                            'Previous Offers (${_previous.length})',
-                          ),
-                          ..._previous.map(_offerCard),
-                        ],
-                      ],
-                    ),
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.grey.shade400,
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: SafeArea(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Navigate to create new counter offer page
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.blue.shade600,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'New Counter Offer',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  const SizedBox(height: 16),
+                  Text('Error: $_error'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _fetchOffers,
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
-    );
-  }
+            )
+            : _offers.isEmpty
+            ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No offers yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your offers will appear here',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            )
+            : Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    children: [
+                      if (_active.isNotEmpty) ...[
+                        _sectionHeader('Active Offers (${_active.length})'),
+                        ..._active.map(_offerCard),
+                      ],
+                      if (_previous.isNotEmpty) ...[
+                        _sectionHeader(
+                          'Previous Offers (${_previous.length})',
+                        ),
+                        ..._previous.map(_offerCard),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        // In OffersNegotiationsPage's build method
+                      onPressed: () {
+                        if (widget.productTitle != null) {
+                          _counterOffer({
+                            'offer_id': 'new_offer_${DateTime.now().millisecondsSinceEpoch}',
+                            'product_id': widget.productId,
+                            'user_id': 'current_user', // You should replace this with actual user ID
+                            'offer_price': widget.productPrice,
+                            'date_time': DateTime.now().toIso8601String(),
+                            'status': 'pending',
+                            'message': 'New offer',
+                            'products': {
+                              'id': widget.productId,
+                              'product_title': widget.productTitle,
+                              'product_image': widget.productImage,
+                              'description': widget.productDescription,
+                              'category': widget.productCategory,
+                              'price': widget.productPrice,
+                            },
+                          });
+                        } else {
+                          // TODO: Navigate to create new counter offer page for general case
+                        }
+                      },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'New Counter Offer',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+  );
+}
 }

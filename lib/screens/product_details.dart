@@ -752,13 +752,20 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                   ],
                 ),
                 child: ElevatedButton(
+                 // In ProductDetailsPage.dart, modify the onPressed handler for the "Make Offer" button
                   onPressed: () {
                     Navigator.push(
                       context,
                       PageRouteBuilder(
-                        pageBuilder:
-                            (context, animation, secondaryAnimation) =>
-                                const OffersNegotiationsPage(),
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            OffersNegotiationsPage(
+                              productId: widget.userId, // or another unique identifier
+                              productTitle: widget.title,
+                              productPrice: widget.price,
+                              productImage: widget.image,
+                              productDescription: widget.description,
+                              productCategory: widget.category,
+                            ),
                         transitionDuration: const Duration(milliseconds: 300),
                         transitionsBuilder: (
                           context,
