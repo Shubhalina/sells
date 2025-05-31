@@ -171,7 +171,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Payment failed: $e'),
+        content: Text('Payment failed:₹$e'),
         backgroundColor: Colors.red,
       ),
     );
@@ -289,7 +289,7 @@ Widget build(BuildContext context) {
                               ),
                             )
                             : Text(
-                              'Pay ${NumberFormat.simpleCurrency().format(amount)}',
+                                'Pay ${NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(amount)}',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
@@ -384,7 +384,7 @@ Widget build(BuildContext context) {
                 ),
               ),
               Text(
-                NumberFormat.simpleCurrency().format(amount),
+              NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(amount),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -416,7 +416,7 @@ Widget build(BuildContext context) {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               Text(
-                NumberFormat.simpleCurrency().format(amount),
+                'Pay ${NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(amount)}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,

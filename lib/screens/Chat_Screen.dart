@@ -2,9 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatSupportScreen extends StatefulWidget {
-  final String orderId;
+  final String productId;
+  final String productTitle;
+  final double productPrice;
+  final String? productImage;
+  final String sellerId;
+  final String sellerName;
 
-  const ChatSupportScreen({super.key, required this.orderId});
+  const ChatSupportScreen({
+    super.key,
+    required this.productId,
+    required this.productTitle,
+    required this.productPrice,
+    this.productImage,
+    required this.sellerId,
+    required this.sellerName,
+  });
 
   @override
   State<ChatSupportScreen> createState() => _ChatSupportScreenState();
@@ -27,7 +40,8 @@ class _ChatSupportScreenState extends State<ChatSupportScreen> {
     final response = await _supabase
         .from('chat_messages')
         .select()
-        .eq('order_id', widget.orderId)
+        .eq('product_id', widget.productId)
+        .eq('seller_id', widget.sellerId)
         .order('created_at')
         .execute();
 
@@ -43,7 +57,9 @@ class _ChatSupportScreenState extends State<ChatSupportScreen> {
     final msg = {
       'sender': 'user',
       'message': message.trim(),
-      'order_id': widget.orderId,
+      'product_id': widget.productId,
+      'seller_id': widget.sellerId,
+      'created_at': DateTime.now().toIso8601String(),
     };
 
     await _supabase.from('chat_messages').insert(msg);
@@ -56,7 +72,7 @@ class _ChatSupportScreenState extends State<ChatSupportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Chat Support"),
+        title: const Text("Product Chat"),
         centerTitle: true,
       ),
       body: Column(
@@ -108,16 +124,16 @@ class _ChatSupportScreenState extends State<ChatSupportScreen> {
           child: Row(
             children: [
               const CircleAvatar(
-                backgroundImage: AssetImage('assets/images/agent.jpg'),
+                backgroundImage: AssetImage('assets/images/usericon.png'),
                 radius: 24,
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Sarah Wilson", style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text("Online • Product Specialist", style: TextStyle(color: Colors.green)),
+                    Text(widget.sellerName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const Text("Online • Product Owner", style: TextStyle(color: Colors.green)),
                   ],
                 ),
               ),
@@ -134,15 +150,29 @@ class _ChatSupportScreenState extends State<ChatSupportScreen> {
           ),
           child: Row(
             children: [
-              Image.asset('assets/images/headphones.png', width: 48, height: 48),
+              if (widget.productImage != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    widget.productImage!,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 48),
+                  ),
+                )
+              else
+                const Icon(Icons.image, size: 48),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Wireless Noise-Canceling Headphones", style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text("Order ID: #ORD-2023-12345"),
-                    Text("\$299.99", style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(widget.productTitle, 
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text("Product ID: ${widget.productId}"),
+                    Text("₹${widget.productPrice.toStringAsFixed(2)}", 
+                        style: const TextStyle(fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),

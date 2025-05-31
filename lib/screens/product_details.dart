@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sells/screens/OffersNegotiationsPage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'Chat_Screen.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final String title;
@@ -142,7 +142,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: Hero(
-          tag: 'product-${widget.title}',
+          tag: 'product-₹${widget.title}',
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -409,7 +409,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
           AnimatedCrossFade(
             firstChild: Text(
               widget.description!.length > 150
-                  ? '${widget.description!.substring(0, 150)}...'
+                  ? '₹${widget.description!.substring(0, 150)}...'
                   : widget.description!,
               style: TextStyle(
                 fontSize: 16,
@@ -812,57 +812,64 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
               ),
             ),
             const SizedBox(width: 16),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6C5CE7), Color(0xFF74B9FF)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6C5CE7).withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Opening chat with seller... 💬'),
-                        backgroundColor: Colors.green.shade600,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.chat_rounded, size: 20, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        "Chat Now",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            // In the _buildBottomActions method, update the Chat Now button
+Expanded(
+  child: Container(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(15),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF6C5CE7), Color(0xFF74B9FF)],
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF6C5CE7).withOpacity(0.4),
+          blurRadius: 12,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: ElevatedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatSupportScreen(
+              productId: widget.userId ?? 'unknown-product',
+              productTitle: widget.title,
+              productPrice: widget.price,
+              productImage: widget.image,
+              sellerId: 'seller-id-here', // Replace with actual seller ID from your data
+              sellerName: 'Verified Seller', // Replace with actual seller name
             ),
+          ),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.chat_rounded, size: 20, color: Colors.white),
+          SizedBox(width: 8),
+          Text(
+            "Chat Now",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    ),
+  ),
+),
           ],
         ),
       ),

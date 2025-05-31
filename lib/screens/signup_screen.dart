@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sells/services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -12,37 +13,83 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
+  final nameController = TextEditingController();
+  final addressController = TextEditingController();
+  final contactController = TextEditingController();
   final supabase = Supabase.instance.client;
 
-  void signUp() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-    final confirmPassword = confirmPasswordController.text.trim();
+  @override
+  void dispose() {
+  emailController.dispose();
+  passwordController.dispose();
+  confirmPasswordController.dispose();
+  nameController.dispose();
+  addressController.dispose();
+  contactController.dispose();
+  super.dispose();
+}
 
-    if (password != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
-      );
-      return;
-    }
+DateTime? _lastSignUpAttempt; // Add this to your state class
+bool _isSigningUp = false; // Add this to your state class
 
-    try {
-      final response = await supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
-      if (response.user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Check your email to confirm sign up")),
-        );
-        // Optionally navigate to login screen
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Signup failed: $e")),
-      );
+void signUp() async {
+  final now = DateTime.now();
+  
+  // Check if enough time has passed since last attempt
+  if (_lastSignUpAttempt != null && 
+      now.difference(_lastSignUpAttempt!).inSeconds < 60) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please wait a minute before trying again")),
+    );
+    return;
+  }
+
+  _lastSignUpAttempt = now;
+  if (_isSigningUp) return; // Prevent multiple clicks
+  
+  setState(() => _isSigningUp = true);
+  
+  final email = emailController.text.trim();
+  final password = passwordController.text.trim();
+  final confirmPassword = confirmPasswordController.text.trim();
+  final name = nameController.text.trim();
+  final address = addressController.text.trim();
+  final contact = contactController.text.trim();
+
+  if (password != confirmPassword) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Passwords do not match")),
+    );
+    return;
+  }
+
+  try {
+    final authService = AuthService(); // Create an instance of AuthService
+
+    await authService.signUpWithEmail(
+      email: email,
+      password: password,
+      name: nameController.text.trim(),
+      address: addressController.text.trim(),
+      contact: contactController.text.trim(),
+    );
+    
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Check your email to confirm sign up")),
+    );
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Signup failed: ${e.toString()}")),
+    );
+  } finally {
+    if (mounted) {
+      setState(() => _isSigningUp = false);
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -84,14 +131,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                hintText: 'Full Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: addressController,
+              decoration: const InputDecoration(
+                hintText: 'Address (Optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: contactController,
+              decoration: const InputDecoration(
+                hintText: 'Contact Number (Optional)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: signUp,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                minimumSize: const Size.fromHeight(50),
-              ),
-              child: const Text("Sign Up"),
+              onPressed: _isSigningUp ? null : signUp,
+              child: _isSigningUp 
+                  ? const CircularProgressIndicator()
+                  : const Text("Sign Up"),
             ),
             const SizedBox(height: 12),
             Row(

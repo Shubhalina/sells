@@ -227,52 +227,55 @@ Future<void> _fetchOffers() async {
   }
 }
 
-  Future<void> _counterOffer(Map<String, dynamic> offer) async {
-    final controller = TextEditingController();
-    final currentPrice =
-        offer['offer_price'] ?? offer['products']?['price'] ?? 100000;
+ Future<void> _counterOffer(Map<String, dynamic> offer) async {
+  final controller = TextEditingController();
+  final currentPrice =
+      offer['offer_price'] ?? offer['products']?['price'] ?? 100000;
 
-    // Show dialog to enter counter offer
-    final result = await showDialog<double>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Counter Offer'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Current offer: ${NumberFormat.simpleCurrency().format(currentPrice)}',
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    labelText: 'Your counter offer',
-                    prefixText: '\$',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ],
+  // Show dialog to enter counter offer
+  final result = await showDialog<double>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Counter Offer'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Current offer: ₹${NumberFormat('#,##0').format(currentPrice)}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final price = double.tryParse(controller.text);
-                  if (price != null && price > 0) {
-                    Navigator.pop(context, price);
-                  }
-                },
-                child: const Text('Send Counter'),
-              ),
-            ],
           ),
-    );
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Your counter offer',
+              prefixText: '₹',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final price = double.tryParse(controller.text);
+            if (price != null && price > 0) {
+              Navigator.pop(context, price);
+            }
+          },
+          child: const Text('Send Counter'),
+        ),
+      ],
+    ),
+  );
 
     if (result != null) {
       try {
@@ -377,12 +380,13 @@ Future<void> _fetchOffers() async {
     );
   }
 
-  Widget _offerCard(Map<String, dynamic> offer) {
-    final product = offer['products'];
-    final offerPrice = offer['offer_price'];
-    final currency = NumberFormat.simpleCurrency().format(offerPrice);
-    final received = timeago.format(DateTime.parse(offer['date_time']));
-    final status = offer['status'] as String;
+    Widget _offerCard(Map<String, dynamic> offer) {
+      final product = offer['products'];
+      final offerPrice = offer['offer_price'];
+      final currency = '₹${NumberFormat('#,##0').format(offerPrice)}'; // Updated here
+      final received = timeago.format(DateTime.parse(offer['date_time']));
+      final status = offer['status'] as String;
+
 
     // Get product details
     final productTitle = product?['product_title'] ?? 'Unknown Product';
@@ -647,15 +651,9 @@ Future<void> _fetchOffers() async {
   );
 // In OffersNegotiationsPage.dart, update the _demoOffers method
 List<Map<String, dynamic>> _demoOffers() {
-  // Generate UUID-like strings for demo purposes
-  String generateDemoId() {
-    final random = Random();
-    return '${random.nextInt(9999)}-${random.nextInt(9999)}-${random.nextInt(9999)}-${random.nextInt(9999)}';
-  }
-
   return [
     {
-      'offer_id': generateDemoId(),
+      'offer_id': '1',
       'product_id': 1,
       'user_id': 'demo-user',
       'offer_price': 130000,
@@ -671,6 +669,7 @@ List<Map<String, dynamic>> _demoOffers() {
         'price': 120000,
       },
     },
+
     {
       'offer_id': '2',
       'product_id': 2,
@@ -861,12 +860,12 @@ Widget build(BuildContext context) {
                       width: double.infinity,
                       child: ElevatedButton(
                         // In OffersNegotiationsPage's build method
-                      onPressed: () {
+                     onPressed: () {
                         if (widget.productTitle != null) {
                           _counterOffer({
                             'offer_id': 'new_offer_${DateTime.now().millisecondsSinceEpoch}',
                             'product_id': widget.productId,
-                            'user_id': 'current_user', // You should replace this with actual user ID
+                            'user_id': 'current_user',
                             'offer_price': widget.productPrice,
                             'date_time': DateTime.now().toIso8601String(),
                             'status': 'pending',
