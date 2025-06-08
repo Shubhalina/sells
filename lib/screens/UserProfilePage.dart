@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'editprofile_screen.dart';
+import 'BuyPackages&MyOrders.dart';
 
 class UserProfileScreen extends StatelessWidget {
   const UserProfileScreen({super.key});
@@ -9,73 +11,170 @@ class UserProfileScreen extends StatelessWidget {
     final user = Supabase.instance.client.auth.currentUser;
 
     return Scaffold(
-      appBar: AppBar(toolbarHeight: 0, elevation: 0),
+      appBar: AppBar(
+        toolbarHeight: 0,
+        elevation: 0,
+        backgroundColor: Colors.white,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const CircleAvatar(
-                radius: 40,
-                backgroundImage: AssetImage('assets/images/usericon.png'),
+              // Header with name and edit profile
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'My Account',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundImage: AssetImage('assets/images/usericon.png'),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.userMetadata?['full_name'] ?? 'S Shubhalina Radu Kakaty',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditProfileScreen(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'View and Edit Profile',
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  // 2 steps left section
+                  //
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(Icons.info_outline, color: Colors.blue),
+                  //       SizedBox(width: 8),
+                  //       Expanded(
+                  //         child: Column(
+                  //           crossAxisAlignment: CrossAxisAlignment.start,
+                  //           children: [
+                  //             Text(
+                  //               '2 steps left',
+                  //               style: TextStyle(
+                  //                 fontWeight: FontWeight.bold,
+                  //               ),
+                  //             ),
+                  //             Text(
+                  //               'We are built on trust. Help one another to get to know each other better',
+                  //               style: TextStyle(
+                  //                 fontSize: 12,
+                  //                 color: Colors.grey.shade600,
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                    // Uncomment and complete the child Row above if needed
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                user?.userMetadata?['full_name'] ?? 'User',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+              SizedBox(height: 24),
+              // Menu items
+              _buildMenuItem(
+                title: 'Buy Packages & My Orders',
+                subtitle: 'Packages, orders, invoices & billing information',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BuyPackagesOrdersScreen(),
+                    ),
+                  );
+                },
+               ),
+              _buildDivider(),
+              _buildMenuItem(
+                title: 'Wishlist',
+                subtitle: 'View your liked items here',
+              ),
+              _buildDivider(),
+              _buildMenuItem(
+                title: 'Settings',
+                subtitle: 'Privacy and logout',
+              ),
+              _buildDivider(),
+              _buildMenuItem(
+                title: 'Help and Support',
+                subtitle: 'Help center, Terms and conditions, Privacy policy',
+              ),
+              _buildDivider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Language',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'English',
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Text(
-                user?.email ?? 'email@example.com',
-                style: const TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () {
-                  // Edit profile action
-                },
-                child: const Text('Edit Profile'),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStat('Total Sales', '\$1,245'),
-                  _buildStat('Listings', '8'),
-                  _buildStat('Reviews', '4.8 ⭐'),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildNavBar(context),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildQuickAction(Icons.add, 'Add Listing'),
-                  _buildQuickAction(Icons.bar_chart, 'Analytics'),
-                  _buildQuickAction(Icons.support_agent, 'Support'),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildSectionTitle('Active Listings'),
-              const SizedBox(height: 10),
-              _buildListings(),
-              const SizedBox(height: 20),
-              _buildSectionTitle('Recent Activity'),
-              const SizedBox(height: 10),
-              _buildActivity(
-                'New Order',
-                'Order #12345 - Smart Watch',
-                '2h ago',
-              ),
-              _buildActivity('Payment', 'Txn ID: 987654', '5h ago'),
-              _buildActivity(
-                'Listing Updated',
-                'Headphones price updated',
-                '1d ago',
+              // Logout button
+              SizedBox(height: 24),
+              Center(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (context.mounted) {
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/login',
+                        (_) => false,
+                      );
+                    }
+                  },
+                  child: Text('Logout', style: TextStyle(color: Colors.red)),
+                ),
               ),
             ],
           ),
@@ -84,146 +183,45 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStat(String title, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        const SizedBox(height: 4),
-        Text(title, style: const TextStyle(color: Colors.grey)),
-      ],
-    );
-  }
-
-  Widget _buildNavBar(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildNavIcon(Icons.list, 'My Listings'),
-        _buildNavIcon(Icons.history, 'History'),
-        _buildNavIcon(Icons.payment, 'Payments'),
-        _buildNavIcon(Icons.settings, 'Settings'),
-        GestureDetector(
-          onTap: () async {
-            await Supabase.instance.client.auth.signOut();
-            if (context.mounted) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/login',
-                (_) => false,
-              );
-            }
-          },
-          child: _buildNavIcon(Icons.logout, 'Logout'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNavIcon(IconData icon, String label) {
-    return Column(
-      children: [
-        Icon(icon, size: 28, color: Colors.blue),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildQuickAction(IconData icon, String label) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: Colors.blue.shade50,
-          child: Icon(icon, color: Colors.blue),
-        ),
-        const SizedBox(height: 6),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-         
-      ),
-    );
-  }
-
-  Widget _buildListings() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        _buildListingCard('Smart Watch', '\$299', 'assets/images/smartwatch.jpg', true),
-        _buildListingCard('Headphones', '\$199', 'assets/images/headphone.jpg', true),
-        _buildListingCard('Camera Lens', '\$499', 'assets/images/camera lens.jpg', false),
-        _buildListingCard('Sunglasses', '\$129', 'assets/images/sunglass.jpg', true),
-      ],
-    );
-  }
-
-  Widget _buildListingCard(
-    String title,
-    String price,
-    String imgPath,
-    bool isActive,
-  ) {
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
-      ),
+  // Update the _buildMenuItem function to include onTap parameter:
+Widget _buildMenuItem({
+  required String title,
+  required String subtitle,
+  VoidCallback? onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              imgPath,
-              height: 100,
-              width: double.infinity,
-              fit: BoxFit.cover,
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(price, style: const TextStyle(color: Colors.blue)),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isActive ? Colors.green.shade100 : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                isActive ? 'Active' : 'Sold',
-                style: const TextStyle(fontSize: 10),
-              ),
+          SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildActivity(String title, String subtitle, String timeAgo) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle),
-      trailing: Text(timeAgo, style: const TextStyle(color: Colors.grey)),
+  Widget _buildDivider() {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: Colors.grey.shade200,
     );
   }
 }

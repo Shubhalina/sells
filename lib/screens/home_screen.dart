@@ -342,6 +342,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         pageBuilder:
                             (context, animation, secondaryAnimation) =>
                                 ProductDetailsPage(
+                                  productId: product['id'],
                                   title: product['product_title'] ?? '',
                                   price: price.toDouble(),
                                   image: product['product_image'] ?? '',

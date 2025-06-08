@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sells/screens/OffersNegotiationsPage.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'Chat_Screen.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -20,7 +20,7 @@ class ProductDetailsPage extends StatefulWidget {
     this.description,
     this.category,
     this.bestOffer,
-    this.userId,
+    this.userId, String? sellerName, required productId,
   });
 
 
@@ -81,7 +81,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
       leading: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.3),
+          color: Colors.black.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(12),
         ),
         child: IconButton(
@@ -93,7 +93,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: IconButton(
@@ -124,7 +124,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
         Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: IconButton(
@@ -199,7 +199,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage>
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          Colors.black.withOpacity(0.6),
+                          Colors.black.withValues(alpha: 0.6),
                           Colors.transparent,
                         ],
                       ),

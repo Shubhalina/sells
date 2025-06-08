@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sells/services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -16,80 +15,119 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final nameController = TextEditingController();
   final addressController = TextEditingController();
   final contactController = TextEditingController();
-  final supabase = Supabase.instance.client;
+  final authService = AuthService();
+
+  DateTime? _lastSignUpAttempt;
+  bool _isSigningUp = false;
 
   @override
   void dispose() {
-  emailController.dispose();
-  passwordController.dispose();
-  confirmPasswordController.dispose();
-  nameController.dispose();
-  addressController.dispose();
-  contactController.dispose();
-  super.dispose();
-}
-
-DateTime? _lastSignUpAttempt; // Add this to your state class
-bool _isSigningUp = false; // Add this to your state class
-
-void signUp() async {
-  final now = DateTime.now();
-  
-  // Check if enough time has passed since last attempt
-  if (_lastSignUpAttempt != null && 
-      now.difference(_lastSignUpAttempt!).inSeconds < 60) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please wait a minute before trying again")),
-    );
-    return;
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    nameController.dispose();
+    addressController.dispose();
+    contactController.dispose();
+    super.dispose();
   }
 
-  _lastSignUpAttempt = now;
-  if (_isSigningUp) return; // Prevent multiple clicks
-  
-  setState(() => _isSigningUp = true);
-  
-  final email = emailController.text.trim();
-  final password = passwordController.text.trim();
-  final confirmPassword = confirmPasswordController.text.trim();
-  final name = nameController.text.trim();
-  final address = addressController.text.trim();
-  final contact = contactController.text.trim();
+  bool _validateInputs() {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
+    final name = nameController.text.trim();
 
-  if (password != confirmPassword) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Passwords do not match")),
-    );
-    return;
+    if (email.isEmpty) {
+      _showSnackBar("Please enter your email address");
+      return false;
+    }
+
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showSnackBar("Please enter a valid email address");
+      return false;
+    }
+
+    if (password.isEmpty) {
+      _showSnackBar("Please enter a password");
+      return false;
+    }
+
+    if (password.length < 6) {
+      _showSnackBar("Password must be at least 6 characters long");
+      return false;
+    }
+
+    if (password != confirmPassword) {
+      _showSnackBar("Passwords do not match");
+      return false;
+    }
+
+    if (name.isEmpty) {
+      _showSnackBar("Please enter your full name");
+      return false;
+    }
+
+    return true;
   }
 
-  try {
-    final authService = AuthService(); // Create an instance of AuthService
-
-    await authService.signUpWithEmail(
-      email: email,
-      password: password,
-      name: nameController.text.trim(),
-      address: addressController.text.trim(),
-      contact: contactController.text.trim(),
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
+  }
+
+  void signUp() async {
+    final now = DateTime.now();
     
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Check your email to confirm sign up")),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Signup failed: ${e.toString()}")),
-    );
-  } finally {
-    if (mounted) {
-      setState(() => _isSigningUp = false);
+    // Rate limiting
+    if (_lastSignUpAttempt != null && 
+        now.difference(_lastSignUpAttempt!).inSeconds < 60) {
+      _showSnackBar("Please wait a minute before trying again");
+      return;
+    }
+
+    if (_isSigningUp) return;
+
+    if (!_validateInputs()) return;
+
+    _lastSignUpAttempt = now;
+    setState(() => _isSigningUp = true);
+    
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
+    final name = nameController.text.trim();
+    final address = addressController.text.trim();
+    final contact = contactController.text.trim();
+
+    try {
+      final result = await authService.signup(
+        email: email,
+        password: password,
+        passwordConfirmation: confirmPassword,
+        name: name,
+        address: address,
+        contact: contact,
+      );
+      
+      if (!mounted) return;
+      
+      if (result['error']) {
+        _showSnackBar(result['message']);
+      } else {
+        _showSnackBar("Account created successfully! You can now sign in.");
+        // Navigate back to login screen
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar("Signup failed: ${e.toString()}");
+    } finally {
+      if (mounted) {
+        setState(() => _isSigningUp = false);
+      }
     }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -106,40 +144,46 @@ void signUp() async {
             const Text("Sign up to get started",
                 style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 24),
+            
             TextField(
               controller: emailController,
               decoration: const InputDecoration(
-                hintText: 'Email address',
+                hintText: 'Email address *',
                 border: OutlineInputBorder(),
               ),
+              keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 12),
+            
             TextField(
               controller: passwordController,
               obscureText: true,
               decoration: const InputDecoration(
-                hintText: 'Password',
+                hintText: 'Password (min 6 characters) *',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
+            
             TextField(
               controller: confirmPasswordController,
               obscureText: true,
               decoration: const InputDecoration(
-                hintText: 'Confirm Password',
+                hintText: 'Confirm Password *',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
+            
             TextField(
               controller: nameController,
               decoration: const InputDecoration(
-                hintText: 'Full Name',
+                hintText: 'Full Name *',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
+            
             TextField(
               controller: addressController,
               decoration: const InputDecoration(
@@ -148,6 +192,7 @@ void signUp() async {
               ),
             ),
             const SizedBox(height: 12),
+            
             TextField(
               controller: contactController,
               decoration: const InputDecoration(
@@ -156,25 +201,38 @@ void signUp() async {
               ),
               keyboardType: TextInputType.phone,
             ),
+            const SizedBox(height: 8),
+            
+            const Text(
+              '* Required fields',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
             const SizedBox(height: 16),
+            
             ElevatedButton(
               onPressed: _isSigningUp ? null : signUp,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(50),
+              ),
               child: _isSigningUp 
-                  ? const CircularProgressIndicator()
+                  ? const CircularProgressIndicator(color: Colors.white)
                   : const Text("Sign Up"),
             ),
             const SizedBox(height: 12),
+            
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text("Already have an account? "),
                 GestureDetector(
                   onTap: () {
-                    Navigator.pop(context); // Back to login screen
+                    Navigator.pop(context);
                   },
                   child: const Text(
                     "Sign In",
-                    style: TextStyle(color: Colors.blue),
+                    style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                   ),
                 )
               ],
