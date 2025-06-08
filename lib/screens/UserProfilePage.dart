@@ -46,7 +46,7 @@ class UserProfileScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user?.userMetadata?['full_name'] ?? 'S Shubhalina Radu Kakaty',
+                              user?.userMetadata?['full_name'] ?? 'Shubhalina Radu Kakaty',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -138,27 +138,7 @@ class UserProfileScreen extends StatelessWidget {
                 subtitle: 'Help center, Terms and conditions, Privacy policy',
               ),
               _buildDivider(),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Language',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      'English',
-                      style: TextStyle(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            
               // Logout button
               SizedBox(height: 24),
               Center(

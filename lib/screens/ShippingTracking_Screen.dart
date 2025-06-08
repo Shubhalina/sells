@@ -1,4 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:sells/screens/Feedback_Screen.dart';
+import 'package:sells/services/database_service.dart';
+
+// Dummy DatabaseService class for demonstration.
+// Replace this with your actual DatabaseService implementation or import.
+class DatabaseService {
+  final String host;
+  final int port;
+  final String dbName;
+  final String username;
+  final String password;
+
+  DatabaseService(this.host, this.port, this.dbName, this.username, this.password);
+
+  Future<void> connect() async {
+    // Dummy implementation for demonstration.
+    // Replace with actual database connection logic.
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
+
+  void close() {
+    // Dummy implementation for demonstration.
+    // Replace with actual database close logic.
+  }
+
+  Future<void> saveShippingDetails(Map<String, dynamic> details) async {
+    // Dummy implementation for demonstration.
+    // Replace with actual logic to save shipping details to your database.
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
+
+  saveFeedback(Map<String, dynamic> map) {}
+}
 
 class ShippingTrackingScreen extends StatefulWidget {
   const ShippingTrackingScreen({super.key});
@@ -14,6 +47,28 @@ class _ShippingTrackingScreenState extends State<ShippingTrackingScreen> {
   final _trackingController = TextEditingController();
   final _shippingDateController = TextEditingController();
   final _deliveryDateController = TextEditingController();
+  final DatabaseService _dbService = DatabaseService(
+  'your-db-host', 
+  5432, 
+  'your-db-name', 
+  'your-username', 
+  'your-password'
+);
+    @override
+    void initState() {
+      super.initState();
+      _initializeDatabase();
+    }
+
+    Future<void> _initializeDatabase() async {
+      await _dbService.connect();
+    }
+
+    @override
+    void dispose() {
+      _dbService.close();
+      super.dispose();
+    }
 
   @override
   Widget build(BuildContext context) {
@@ -45,19 +100,47 @@ class _ShippingTrackingScreenState extends State<ShippingTrackingScreen> {
             const SizedBox(height: 12),
             _buildUploadBox(),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {},
+           ElevatedButton(
+              onPressed: () async {
+                if (selectedCourier == null || 
+                    _trackingController.text.isEmpty || 
+                    _shippingDateController.text.isEmpty || 
+                    _deliveryDateController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all fields')),
+                  );
+                  return;
+                }
+
+                try {
+                  await _dbService.saveShippingDetails({
+                    'offerId': (ModalRoute.of(context)?.settings.arguments as Map?)?['offerId'],
+                    'courier': selectedCourier,
+                    'trackingNumber': _trackingController.text,
+                    'shippingDate': _shippingDateController.text,
+                    'estimatedDelivery': _deliveryDateController.text,
+                  });
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FeedbackScreen(),
+                      settings: RouteSettings(arguments: {
+                        'offerId': (ModalRoute.of(context)?.settings.arguments as Map?)?['offerId'],
+                      }),
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error saving shipping details: $e')),
+                  );
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: const Text("Submit Details", style: TextStyle(fontSize: 16)),
-            ),
-            const SizedBox(height: 16),
-            TextButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.help_outline),
-              label: const Text("Need Help?"),
             ),
           ],
         ),
@@ -103,7 +186,7 @@ class _ShippingTrackingScreenState extends State<ShippingTrackingScreen> {
   Widget _buildDropdown() {
     return DropdownButtonFormField<String>(
       decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Courier Service'),
-      items: ['Speed Post', 'Delhivery', 'BlueDart', 'DHL']
+      items: ['Speed Post', 'Delivery', 'BlueDart', 'DHL']
           .map((courier) => DropdownMenuItem(value: courier, child: Text(courier)))
           .toList(),
       onChanged: (value) {

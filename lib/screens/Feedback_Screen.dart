@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ShippingTracking_Screen.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -16,6 +17,29 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       rating = value;
     });
   }
+  final DatabaseService _dbService = DatabaseService(
+  'your-db-host', 
+  5432, 
+  'your-db-name', 
+  'your-username', 
+  'your-password'
+);
+
+@override
+void initState() {
+  super.initState();
+  _initializeDatabase();
+}
+
+Future<void> _initializeDatabase() async {
+  await _dbService.connect();
+}
+
+@override
+void dispose() {
+  _dbService.close();
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -63,14 +87,24 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          _OrderDetailRow(label: 'Order ID', value: '#123456789'),
-          SizedBox(height: 8),
-          _OrderDetailRow(label: 'Date', value: 'Jan 15, 2024'),
-          SizedBox(height: 8),
-          _OrderDetailRow(label: 'Amount', value: '\$125.00'),
+        children: [
+          _orderDetailRow(label: 'Order ID', value: '#123456789'),
+          const SizedBox(height: 8),
+          _orderDetailRow(label: 'Date', value: 'Jan 15, 2024'),
+          const SizedBox(height: 8),
+          _orderDetailRow(label: 'Amount', value: '\$125.00'),
         ],
       ),
+    );
+  }
+
+  Widget _orderDetailRow({required String label, required String value}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w400)),
+      ],
     );
   }
 
@@ -103,37 +137,39 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     );
   }
 
-  Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          // You can handle feedback submission here
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-        child: const Text("Submit Feedback", style: TextStyle(fontSize: 16)),
+ Widget _buildSubmitButton() {
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton(
+      onPressed: () async {
+        if (rating == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please provide a rating')),
+          );
+          return;
+        }
+
+        try {
+          await _dbService.saveFeedback({
+            'offerId': (ModalRoute.of(context)?.settings.arguments as Map?)?['offerId'],
+            'rating': rating,
+            'comments': feedbackController.text,
+          });
+
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error submitting feedback: $e')),
+          );
+        }
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue,
+        padding: const EdgeInsets.symmetric(vertical: 16),
       ),
-    );
-  }
+      child: const Text("Submit Feedback", style: TextStyle(fontSize: 16)),
+    ),
+  );
 }
 
-class _OrderDetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _OrderDetailRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
 }

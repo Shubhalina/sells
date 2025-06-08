@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:sells/screens/ShippingTracking_Screen.dart';
+import 'package:sells/services/database_service.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -80,6 +82,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
     // Get the offer details from arguments
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final offerId = args?['offerId'];
+    final amount = args?['amount'] ?? 0;
+    final productTitle = args?['productTitle'] ?? 'Unknown Product';
 
     // Here you would typically:
     // 1. Process the actual payment with your payment provider
@@ -142,6 +146,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ],
         ),
+       // In PaymentScreen.dart, modify the success dialog actions:
         actions: [
           SizedBox(
             width: double.infinity,
@@ -156,12 +161,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Go back to previous screen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ShippingTrackingScreen(),
+                    settings: RouteSettings(arguments: {
+                      'offerId': offerId,
+                      'amount': amount,
+                      'productTitle': productTitle,
+                    }),
+                  ),
+                );
               },
-              child: const Text(
-                'Done',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
+              child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
         ],

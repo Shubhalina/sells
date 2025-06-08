@@ -13,6 +13,7 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late TextEditingController _phoneController;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -32,6 +33,54 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
     _phoneController.dispose();
     super.dispose();
   }
+  
+
+  Future<void> _updateProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isLoading = true);
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      // Update both auth metadata and profiles table
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(
+          data: {
+            'full_name': _nameController.text,
+            'phone': _phoneController.text,
+          },
+        ),
+      );
+
+      await Supabase.instance.client.from('profiles').upsert({
+        'id': user.id,
+        'full_name': _nameController.text,
+        'description': _descriptionController.text,
+        'phone': _phoneController.text,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).execute();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
