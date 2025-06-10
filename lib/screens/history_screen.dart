@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(MaterialApp(home: HistoryPage()));
-}
+import '../services/history_service.dart';
 
 class HistoryPage extends StatelessWidget {
-  const HistoryPage({super.key});
+  final HistoryService _historyService = HistoryService();
+
+  HistoryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +15,7 @@ class HistoryPage extends StatelessWidget {
           backgroundColor: Colors.white,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () {}, // Add back navigation
+            onPressed: () => Navigator.pop(context),
           ),
           title: const Text('History', style: TextStyle(color: Colors.black)),
           centerTitle: true,
@@ -31,11 +30,11 @@ class HistoryPage extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            AllActivityTab(),
-            Center(child: Text('Purchases Tab')),
-            Center(child: Text('Saved Items Tab')),
+            _ActivityTab(fetchData: _historyService.fetchAllActivities),
+            _ActivityTab(fetchData: _historyService.fetchPurchases),
+            _ActivityTab(fetchData: _historyService.fetchSavedItems),
           ],
         ),
       ),
@@ -43,63 +42,70 @@ class HistoryPage extends StatelessWidget {
   }
 }
 
-class AllActivityTab extends StatelessWidget {
-  const AllActivityTab({super.key});
+class _ActivityTab extends StatelessWidget {
+  final Future<List<Map<String, dynamic>>> Function() fetchData;
+
+  const _ActivityTab({required this.fetchData});
 
   @override
   Widget build(BuildContext context) {
-    final todayItems = [
-      HistoryItem(
-        image: 'https://via.placeholder.com/150/FF0000', // Replace with actual image
-        title: 'Nike Air Max 270',
-        subtitle: 'Purchase completed',
-        price: '\$129.99',
-        time: '2:30 PM',
-        statusColor: Colors.green,
-      ),
-      HistoryItem(
-        image: 'https://via.placeholder.com/150/0000FF', // Replace
-        title: 'Vintage Denim Jacket',
-        subtitle: 'Saved to wishlist',
-        price: '\$45.00',
-        time: '11:20 AM',
-        statusColor: Colors.grey,
-      ),
-    ];
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: fetchData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    final yesterdayItems = [
-      HistoryItem(
-        image: 'https://via.placeholder.com/150/FFFFFF', // Replace
-        title: 'Adidas Ultra Boost',
-        subtitle: 'Viewed item',
-        price: '\$159.99',
-        time: '4:45 PM',
-        statusColor: Colors.grey,
-      ),
-      HistoryItem(
-        image: 'https://via.placeholder.com/150/ADD8E6', // Replace
-        title: 'Supreme T-Shirt',
-        subtitle: 'Purchase completed',
-        price: '\$89.99',
-        time: '2:15 PM',
-        statusColor: Colors.green,
-      ),
-    ];
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text('Today', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        ...todayItems.map((item) => HistoryTile(item: item)).toList(),
-        const SizedBox(height: 16),
-        const Text('Yesterday', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        ...yesterdayItems.map((item) => HistoryTile(item: item)).toList(),
-      ],
+        final items = snapshot.data ?? [];
+
+        if (items.isEmpty) {
+          return const Center(child: Text('No activities found'));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final activity = items[index];
+            final product = activity['products'] as Map<String, dynamic>;
+            
+            return HistoryTile(
+              item: HistoryItem(
+                image: product['image_url'] ?? 'https://via.placeholder.com/150',
+                title: product['name'] ?? 'Unknown Product',
+                subtitle: _getSubtitle(activity['activity_type']),
+                price: '\₹${product['price']?.toStringAsFixed(2) ?? '0.00'}',
+                time: _formatTime(activity['created_at']),
+                statusColor: activity['status'] == 'completed' 
+                  ? Colors.green 
+                  : Colors.grey,
+              ),
+            );
+          },
+        );
+      },
     );
   }
+
+  String _getSubtitle(String activityType) {
+    switch (activityType) {
+      case 'purchase': return 'Purchase completed';
+      case 'saved': return 'Saved to wishlist';
+      case 'viewed': return 'Viewed item';
+      default: return 'Activity';
+    }
+  }
+
+  String _formatTime(String timestamp) {
+    final dateTime = DateTime.parse(timestamp).toLocal();
+    return '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')} ${dateTime.hour < 12 ? 'AM' : 'PM'}';
+  }
 }
+
 
 class HistoryItem {
   final String image;

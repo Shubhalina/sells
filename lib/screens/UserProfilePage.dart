@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'editprofile_screen.dart';
+import 'BasicInfo_Screen.dart';
 import 'BuyPackages&MyOrders.dart';
 
 class UserProfileScreen extends StatelessWidget {
@@ -58,7 +58,7 @@ class UserProfileScreen extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => EditProfileScreen(),
+                                    builder: (context) => BasicInfoScreen(),
                                   ),
                                 );
                               },

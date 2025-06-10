@@ -3,6 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sells/screens/AddProductPage.dart';
 import 'package:sells/screens/product_details.dart';
 import 'package:sells/screens/UserProfilePage.dart';
+import 'package:sells/services/product_service.dart';
+import 'package:sells/screens/history_screen.dart';
+import 'dart:async';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,19 +42,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     'Books': const Color(0xFFFD79A8),
   };
 
+  final ProductService _productService = ProductService();
   List<Map<String, dynamic>> allProducts = [];
   List<Map<String, dynamic>> filteredProducts = [];
   String selectedCategory = 'All';
   bool isLoading = true;
+  String _searchQuery = '';
+  
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   final TextEditingController _searchController = TextEditingController();
 
+  // Single stream subscription
+  StreamSubscription<List<Map<String, dynamic>>>? _productsSubscription;
+
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
+    _initializeProductsStream();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _initializeAnimations() {
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -71,9 +86,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate(
       CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
     );
-
-    fetchProducts();
-    _searchController.addListener(_onSearchChanged);
   }
 
   @override
@@ -81,66 +93,121 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _fadeController.dispose();
     _slideController.dispose();
     _searchController.dispose();
+    _productsSubscription?.cancel();
+    _productService.dispose();
     super.dispose();
   }
 
+  void _initializeProductsStream() {
+    setState(() {
+      isLoading = true;
+    });
+
+    _productsSubscription?.cancel();
+
+    _productsSubscription = _productService.getProductsStream(
+      category: selectedCategory == 'All' ? null : selectedCategory,
+      searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+    ).listen(
+      (products) {
+        if (mounted) {
+          setState(() {
+            allProducts = products;
+            filteredProducts = _filterProducts(products);
+            isLoading = false;
+          });
+          
+          if (!_fadeController.isCompleted) {
+            _fadeController.forward();
+            _slideController.forward();
+          }
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error loading products: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  List<Map<String, dynamic>> _filterProducts(List<Map<String, dynamic>> products) {
+    List<Map<String, dynamic>> filtered = products;
+
+    if (selectedCategory != 'All') {
+      filtered = filtered.where((product) => 
+        product['category']?.toString().toLowerCase() == selectedCategory.toLowerCase()
+      ).toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((product) {
+        final title = product['product_title']?.toString().toLowerCase() ?? '';
+        final description = product['description']?.toString().toLowerCase() ?? '';
+        final category = product['category']?.toString().toLowerCase() ?? '';
+        
+        return title.contains(_searchQuery) || 
+               description.contains(_searchQuery) || 
+               category.contains(_searchQuery);
+      }).toList();
+    }
+
+    return filtered;
+  }
+
   void _onSearchChanged() {
-    filterProducts();
-  }
-
-  Future<void> fetchProducts() async {
-    try {
-      final response = await Supabase.instance.client.from('products').select();
-
+    final newQuery = _searchController.text.toLowerCase();
+    if (_searchQuery != newQuery) {
       setState(() {
-        allProducts = List<Map<String, dynamic>>.from(response);
-        filterProducts();
-        isLoading = false;
-      });
-
-      _fadeController.forward();
-      _slideController.forward();
-    } catch (e) {
-      print('Failed to fetch products: $e');
-      setState(() {
-        isLoading = false;
+        _searchQuery = newQuery;
+        filteredProducts = _filterProducts(allProducts);
       });
     }
   }
 
-  void filterProducts() {
-    String searchQuery = _searchController.text.toLowerCase();
-
-    List<Map<String, dynamic>> categoryFiltered;
-    if (selectedCategory == 'All') {
-      categoryFiltered = [...allProducts];
-    } else {
-      categoryFiltered =
-          allProducts
-              .where(
-                (product) =>
-                    product['category']?.toString().toLowerCase() ==
-                    selectedCategory.toLowerCase(),
-              )
-              .toList();
+  void _onCategoryChanged(String category) {
+    if (selectedCategory != category) {
+      setState(() {
+        selectedCategory = category;
+        filteredProducts = _filterProducts(allProducts);
+      });
     }
+  }
 
-    if (searchQuery.isNotEmpty) {
-      filteredProducts =
-          categoryFiltered
-              .where(
-                (product) =>
-                    product['product_title']?.toString().toLowerCase().contains(
-                      searchQuery,
-                    ) ??
-                    false,
-              )
-              .toList();
-    } else {
-      filteredProducts = categoryFiltered;
-    }
+  Future<void> _refreshProducts() async {
+    _initializeProductsStream();
+  }
 
-    setState(() {});
+  void _showHistoryPage() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => HistoryPage(),
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (
+          context,
+          animation,
+          secondaryAnimation,
+          child,
+        ) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildGradientBackground() {
@@ -174,18 +241,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           hintText: "Search amazing products...",
           hintStyle: TextStyle(color: Colors.grey.shade500),
           prefixIcon: Icon(Icons.search_rounded, color: Colors.grey.shade600),
-          suffixIcon:
-              _searchController.text.isNotEmpty
-                  ? IconButton(
-                    icon: Icon(
-                      Icons.clear_rounded,
-                      color: Colors.grey.shade600,
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                    },
-                  )
-                  : null,
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.clear_rounded,
+                    color: Colors.grey.shade600,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(25),
             borderSide: BorderSide.none,
@@ -224,40 +290,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           child: GestureDetector(
-            onTap: () {
-              setState(() {
-                selectedCategory = category;
-                filterProducts();
-              });
-            },
+            onTap: () => _onCategoryChanged(category),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                gradient:
-                    isSelected
-                        ? LinearGradient(
-                          colors: [color, color.withOpacity(0.8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                        : null,
+                gradient: isSelected
+                    ? LinearGradient(
+                        colors: [color, color.withOpacity(0.8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
                 color: isSelected ? null : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        isSelected
-                            ? color.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.1),
+                    color: isSelected
+                        ? color.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.1),
                     blurRadius: isSelected ? 6 : 3,
                     offset: Offset(0, isSelected ? 3 : 1),
                   ),
                 ],
-                border:
-                    isSelected ? null : Border.all(color: Colors.grey.shade300),
+                border: isSelected ? null : Border.all(color: Colors.grey.shade300),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -272,8 +330,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     category,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                       color: isSelected ? Colors.white : Colors.grey.shade700,
                     ),
                   ),
@@ -287,12 +344,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildProductCard(Map<String, dynamic> product, int index) {
-    final price =
-        product['price'] != null
-            ? (product['price'] is num
-                ? product['price']
-                : double.tryParse(product['price'].toString()) ?? 0)
-            : 0;
+    final price = product['price'] != null
+        ? (product['price'] is num
+            ? product['price']
+            : double.tryParse(product['price'].toString()) ?? 0)
+        : 0;
 
     return AnimatedBuilder(
       animation: _fadeAnimation,
@@ -339,14 +395,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Navigator.push(
                       context,
                       PageRouteBuilder(
-                        pageBuilder:
-                            (context, animation, secondaryAnimation) =>
-                                ProductDetailsPage(
-                                  productId: product['id'],
-                                  title: product['product_title'] ?? '',
-                                  price: price.toDouble(),
-                                  image: product['product_image'] ?? '',
-                                ),
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            ProductDetailsPage(
+                          productId: product['id'],
+                          title: product['product_title'] ?? '',
+                          price: price.toDouble(),
+                          image: product['product_image'] ?? '',
+                        ),
                         transitionDuration: const Duration(milliseconds: 300),
                         transitionsBuilder: (
                           context,
@@ -380,22 +435,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 product['product_image'] ?? '',
                                 fit: BoxFit.cover,
                                 width: double.infinity,
-                                errorBuilder:
-                                    (_, __, ___) => Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.grey.shade200,
-                                            Colors.grey.shade100,
-                                          ],
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        Icons.image_rounded,
-                                        size: 60,
-                                        color: Colors.grey.shade400,
-                                      ),
+                                errorBuilder: (_, __, ___) => Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.grey.shade200,
+                                        Colors.grey.shade100,
+                                      ],
                                     ),
+                                  ),
+                                  child: Icon(
+                                    Icons.image_rounded,
+                                    size: 60,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -441,9 +495,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF00B894,
-                                    ).withOpacity(0.1),
+                                    color: const Color(0xFF00B894).withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -456,24 +508,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 const Spacer(),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    "Negotiable",
-                                    style: TextStyle(
-                                      color: Colors.blue,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
+                                if (product['best_offer'] == true)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      "Best Offer",
+                                      style: TextStyle(
+                                        color: Colors.blue,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
-                                ),
                               ],
                             ),
                           ],
@@ -503,9 +556,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder:
-                    (context, animation, secondaryAnimation) =>
-                        UserProfileScreen(),
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    UserProfileScreen(),
                 transitionDuration: const Duration(milliseconds: 300),
                 transitionsBuilder: (
                   context,
@@ -545,6 +597,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         actions: [
+          // History Button
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: GestureDetector(
+              onTap: _showHistoryPage,
+              child: const Icon(
+                Icons.history_rounded,
+                color: Colors.black87,
+                size: 20,
+              ),
+            ),
+          ),
+          // Notifications Button
           Container(
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.all(10),
@@ -567,106 +644,109 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          _buildGradientBackground(),
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _buildSearchBar()),
-              SliverToBoxAdapter(
-                child: Container(
-                  height: 50,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: categories.length,
-                    itemBuilder:
-                        (context, index) =>
-                            _buildCategoryChip(categories[index], index),
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      const Text(
-                        "Featured Deals",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          "See All",
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              isLoading
-                  ? const SliverFillRemaining(
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                      ),
+      body: RefreshIndicator(
+        onRefresh: _refreshProducts,
+        child: Stack(
+          children: [
+            _buildGradientBackground(),
+            CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: _buildSearchBar()),
+                SliverToBoxAdapter(
+                  child: Container(
+                    height: 50,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) =>
+                          _buildCategoryChip(categories[index], index),
                     ),
-                  )
-                  : filteredProducts.isEmpty
-                  ? SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 80,
-                            color: Colors.grey.shade400,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        const Text(
+                          "Featured Deals",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            "No products found",
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text(
+                            "See All",
                             style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  )
-                  : SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.75,
-                          ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) =>
-                            _buildProductCard(filteredProducts[index], index),
-                        childCount: filteredProducts.length,
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-            ],
-          ),
-        ],
+                ),
+                isLoading
+                    ? const SliverFillRemaining(
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.blue),
+                          ),
+                        ),
+                      )
+                    : filteredProducts.isEmpty
+                        ? SliverFillRemaining(
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.search_off_rounded,
+                                    size: 80,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "No products found",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : SliverPadding(
+                            padding: const EdgeInsets.all(16),
+                            sliver: SliverGrid(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 0.75,
+                              ),
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) => _buildProductCard(
+                                    filteredProducts[index], index),
+                                childCount: filteredProducts.length,
+                              ),
+                            ),
+                          ),
+              ],
+            ),
+          ],
+        ),
       ),
       floatingActionButton: Container(
         decoration: BoxDecoration(
@@ -678,7 +758,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF6C5CE7).withOpacity(0.3),
+              color: const Color(0xFF6C5CE7).withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
