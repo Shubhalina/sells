@@ -296,15 +296,57 @@ class ProductService {
     }
   }
 
-  // Toggle favorite status
+ // Updated favorites methods
+  Future<List<Map<String, dynamic>>> getFavoriteProducts() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final response = await _supabase
+          .from('user_favorites')
+          .select('''product:products(
+            id,
+            product_title,
+            description,
+            price,
+            category,
+            product_image,
+            image_urls,
+            best_offer,
+            created_at
+          )''')
+          .eq('user_id', user.id);
+
+      // Extract products from the joined response
+      return response.map((fav) => fav['product'] as Map<String, dynamic>).toList();
+    } catch (e) {
+      print('Error fetching favorites: $e');
+      return [];
+    }
+  }
+
   Future<void> toggleFavorite(String productId, bool isFavorite) async {
     try {
-      await _supabase
-          .from('products')
-          .update({'is_favorite': isFavorite})
-          .eq('id', productId);
+      final user = _supabase.auth.currentUser;
+      if (user == null) {
+        throw 'User not authenticated';
+      }
+
+      if (isFavorite) {
+        await _supabase.from('user_favorites').insert({
+          'user_id': user.id,
+          'product_id': productId,
+        });
+      } else {
+        await _supabase
+            .from('user_favorites')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('product_id', productId);
+      }
     } catch (e) {
-      throw Exception('Failed to toggle favorite: $e');
+      print('Error toggling favorite: $e');
+      throw e;
     }
   }
 

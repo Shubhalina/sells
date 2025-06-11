@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sells/services/profile_service.dart';
 
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -126,10 +127,11 @@ class AuthService {
         };
       }
 
-      final response = await _supabase.auth.signInWithPassword(
-        email: email.trim().toLowerCase(),
-        password: password,
-      );
+final response = await _supabase.auth.signInWithPassword(
+  email: email,
+  password: password,
+);
+
 
       if (response.user == null) {
         return {
@@ -187,6 +189,7 @@ class AuthService {
       };
     }
   }
+
 
   // Get current user
   User? getCurrentUser() {

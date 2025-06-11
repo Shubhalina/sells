@@ -236,7 +236,7 @@ class _AddProductPageState extends State<AddProductPage> {
         final response = await http.get(
           url,
           headers: {
-            'User-Agent': 'YourAppName/1.0', // Replace with your app name
+            'User-Agent': 'ReBuy/1.0', // Replace with your app name
           },
         ).timeout(const Duration(seconds: 5));
 

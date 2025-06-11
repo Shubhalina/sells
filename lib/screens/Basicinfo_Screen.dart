@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sells/services/profile_service.dart'; // Only import from services
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BasicInfoScreen extends StatefulWidget {
@@ -10,20 +11,19 @@ class BasicInfoScreen extends StatefulWidget {
 
 class _BasicInfoScreenState extends State<BasicInfoScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _descriptionController;
-  late TextEditingController _phoneController;
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _phoneController;
   bool _isLoading = false;
+  final ProfileService _profileService = ProfileService();
 
   @override
   void initState() {
     super.initState();
-    final user = Supabase.instance.client.auth.currentUser;
-    _nameController = TextEditingController(
-      text: user?.userMetadata?['full_name'] ?? 'Shubhaiina Radu Kakaty',
-    );
+    _nameController = TextEditingController();
     _descriptionController = TextEditingController();
     _phoneController = TextEditingController();
+    _fetchUserProfile();
   }
 
   @override
@@ -33,54 +33,54 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
     _phoneController.dispose();
     super.dispose();
   }
-  
+
+  Future<void> _fetchUserProfile() async {
+    if (mounted) setState(() => _isLoading = true);
+    
+    try {
+      final profileData = await _profileService.getProfile();
+      _nameController.text = profileData?['full_name'] ?? '';
+      _descriptionController.text = profileData?['description'] ?? '';
+      _phoneController.text = profileData?['phone'] ?? '';
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
     
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
+    
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return;
-
-      // Update both auth metadata and profiles table
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(
-          data: {
-            'full_name': _nameController.text,
-            'phone': _phoneController.text,
-          },
-        ),
+      await _profileService.upsertProfile(
+        fullName: _nameController.text,
+        description: _descriptionController.text,
+        phone: _phoneController.text,
       );
-
-      await Supabase.instance.client.from('profiles').upsert({
-        'id': user.id,
-        'full_name': _nameController.text,
-        'description': _descriptionController.text,
-        'phone': _phoneController.text,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).execute();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully')),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
+          SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -88,35 +88,43 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Basic Information'),
+        title: const Text('Basic Information'),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+              const Text(
                 'Basic information',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Your Name',
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your name';
+                  }
+                  return null;
+                },
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
                 maxLength: 30,
@@ -124,82 +132,85 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
                 decoration: InputDecoration(
                   labelText: 'Description',
                   hintText: 'Tell us about yourself',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   counterText: '${_descriptionController.text.length}/30',
                 ),
                 onChanged: (value) {
                   setState(() {});
                 },
               ),
-              Divider(height: 40),
-              Text(
+              const Divider(height: 40),
+              const Text(
                 'Contact information',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _phoneController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Phone',
                   hintText: 'Enter your phone',
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your phone number';
+                  }
+                  return null;
+                },
               ),
-              SizedBox(height: 8),
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 'This is the number for buyers contacts, reminders, and other notifications.',
                 style: TextStyle(color: Colors.grey),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextFormField(
-                initialValue: user?.email ?? 'shubhaiinaradukakaty@gmail.com',
+                initialValue: user?.email ?? '',
                 readOnly: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 'Your email is never shared with external parties nor do we use it to spam you in any way.',
                 style: TextStyle(color: Colors.grey),
               ),
-              Divider(height: 40),
-              Text(
+              const Divider(height: 40),
+              const Text(
                 'Additional information',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.account_circle, size: 40),
-                title: Text('Google'),
-                subtitle: Text('Link your Google account'),
+                leading: const Icon(Icons.account_circle, size: 40),
+                title: const Text('Google'),
+                subtitle: const Text('Link your Google account'),
                 trailing: TextButton(
                   onPressed: () {},
-                  child: Text(
+                  child: const Text(
                     'Unlink',
                     style: TextStyle(color: Colors.blue),
                   ),
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // Save the changes
-                    Navigator.pop(context);
-                  }
-                },
-                child: Text('Save Changes'),
+                onPressed: _isLoading ? null : _updateProfile,
+                child: _isLoading 
+                    ? const CircularProgressIndicator()
+                    : const Text('Save Changes'),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: Size(double.infinity, 50),
+                  minimumSize: const Size(double.infinity, 50),
                 ),
               ),
             ],

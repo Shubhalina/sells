@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sells/screens/OffersNegotiationsPage.dart';
-
 import 'Chat_Screen.dart';
 
 class ProductDetailsPage extends StatefulWidget {
